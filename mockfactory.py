@@ -66,6 +66,11 @@ def main():
         action='store_true',
         help='Populate Foerderschwerpunkte catalog based on school form'
     )
+    parser.add_argument(
+        '--full-setup',
+        action='store_true',
+        help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
+    )
     
     args = parser.parse_args()
     
@@ -113,6 +118,60 @@ def main():
     elif args.populate_foerderschwerpunkte:
         created, failed = populate_foerderschwerpunkte(config)
         return 0 if failed == 0 else 1
+    elif args.full_setup:
+        print("=" * 70)
+        print("SVWS Mock Factory - Complete Setup with All Catalogs")
+        print("=" * 70)
+        
+        # Step 1: Check server
+        print("\n[1/5] Checking server connectivity...")
+        if not check_server_alive(config):
+            print("Server is not accessible. Aborting setup.")
+            return 1
+        print("✓ Server is alive")
+        
+        # Step 2: Create schema
+        print("\n[2/5] Creating schema...")
+        if not create_schema(config):
+            print("Schema creation failed. Aborting setup.")
+            return 1
+        print("✓ Schema created successfully")
+        
+        # Step 3: Initialize database
+        print("\n[3/5] Initializing database...")
+        if not init_database(config):
+            print("Database initialization failed. Aborting setup.")
+            return 1
+        print("✓ Database initialized successfully")
+        
+        # Step 4: Populate Fahrschuelerarten
+        print("\n[4/5] Populating Fahrschuelerarten catalog...")
+        created, failed = populate_fahrschuelerarten(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Fahrschuelerarten entries")
+        
+        # Step 5: Populate Einwilligungsarten
+        print("\n[5/6] Populating Einwilligungsarten catalog...")
+        created, failed = populate_einwilligungsarten(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Einwilligungsarten entries")
+        
+        # Step 6: Populate Foerderschwerpunkte
+        print("\n[6/6] Populating Foerderschwerpunkte catalog...")
+        created, failed = populate_foerderschwerpunkte(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Foerderschwerpunkte entries")
+        
+        print("\n" + "=" * 70)
+        print("✓ Complete setup finished successfully!")
+        print("=" * 70)
+        return 0
     else:
         parser.print_help()
         return 0
