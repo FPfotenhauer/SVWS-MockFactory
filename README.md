@@ -7,8 +7,12 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 ## Features
 
 - ✓ **Server-Status prüfen**: Verbindung zum SVWS-Server testen
-- ✓ **Datenbank initialisieren**: Schema mit Schulnummer initialisieren
-- 🚧 **Kataloge füllen**: Schuldatenbank-Kataloge befüllen (in Entwicklung)
+- ✓ **Datenbank-Schema verwalten**: Erstellen, löschen, auflisten
+- ✓ **Datenbank initialisieren**: Schema mit Schulnummer und Schulinformationen initialisieren
+- ✓ **Kataloge füllen**: Automatische Befüllung der Schuldatenbank-Kataloge
+  - Fahrschülerarten (15 Einträge)
+  - Einwilligungsarten (aus katalogdaten/einwilligungen.json)
+  - Förderschwerpunkte (schulformabhängig)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -173,25 +177,100 @@ Die Initialisierung erstellt die Schulstruktur mit:
 - Schuljahresabschnitte
 - Grundeinstellungen
 
+### Katalogdaten befüllen
+
+#### Fahrschülerarten
+
+Erstellt 15 Standard-Fahrschülerarteneinträge (Busunternehmen 1-15):
+
+```bash
+python mockfactory.py --populate-fahrschuelerarten
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schueler/fahrschuelerarten/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: Statische Daten (15 Einträge)
+
+#### Einwilligungsarten
+
+Befüllt den Einwilligungskatalog aus der JSON-Datei `katalogdaten/einwilligungen.json`:
+
+```bash
+python mockfactory.py --populate-einwilligungsarten
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schule/einwilligungsarten/new`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/einwilligungen.json
+
+Einträge:
+- Einwilligung Homepage
+- Einwilligung Social Media
+- Einwilligung Presse
+- Einwilligung Werbung
+- Einwilligung Externe Partner
+- Einwilligung Forschung
+- Einwilligung Newsletter
+
+#### Förderschwerpunkte
+
+Befüllt den Förderschwerpunkt-Katalog basierend auf der Schulform der Schule:
+
+```bash
+python mockfactory.py --populate-foerderschwerpunkte
+```
+
+**API-Endpunkt**: `POST /db/{schema}/foerderschwerpunkte/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: statistikdaten/Foerderschwerpunkt.json (schulformabhängig)
+
+Das Programm:
+1. Ruft die Schulstammdaten ab, um die Schulform zu ermitteln
+2. Lädt die Förderschwerpunkt-Katalogdaten
+3. Filtert Einträge für die Schulform
+4. Erstellt nur gültige Einträge für diese Schulform
+5. Berücksichtigt zeitliche Gültigkeiten basierend auf dem aktuellen Jahr
+
+Beispiel für Gesamtschule (GE): 10 Förderschwerpunkte
+- kein Förderschwerpunkt (**)
+- Sehen (BL)
+- Emotionale und soziale Entwicklung (EZ)
+- Geistige Entwicklung (GB)
+- Hören und Kommunikation (GH)
+- Körperliche und motorische Entwicklung (KB)
+- Sprache (LB, SG)
+- und weitere
+
 ## Datendateien
 
-Das Programm nutzt folgende JSON-Dateien zur Generierung realistischer Testdaten:
+Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und Kataloge:
 
+### Namensdaten
 - `vornamen_m.json`: Männliche Vornamen
 - `vornamen_w.json`: Weibliche Vornamen
 - `nachnamen.json`: Nachnamen
 - `Strassen.csv`: Straßennamen für Adressdaten
 
+### Katalogdaten
+- `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog
+- `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
+
 ## Entwicklungsstatus
 
 ### Implementiert ✓
 - Server-Erreichbarkeit prüfen
+- Datenbank-Schema erstellen, löschen, auflisten
 - Datenbank-Schema initialisieren
+- Katalog-Befüllung:
+  - Fahrschülerarten (15 Einträge)
+  - Einwilligungsarten (aus JSON-Datei)
+  - Förderschwerpunkte (schulformabhängig)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
+- Complete Setup Workflow (alle Schritte auf einmal)
 
 ### In Planung 🚧
-- Katalogdaten befüllen
+- Weitere Kataloge (Adressarten, Berufsfelder, etc.)
 - Lehrkräfte mit realistischen Daten generieren
 - Schülerdaten mit realistischen Daten generieren
 - Klassen und Kurse erstellen

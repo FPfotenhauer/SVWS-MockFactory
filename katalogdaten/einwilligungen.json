@@ -1,0 +1,59 @@
+{
+  "einwilligungen": [ {
+  "bezeichnung": "Einwilligung Homepage",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Verwendung auf der Homepage",
+  "idPersonTyp": 2,
+  "sortierung": 1,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Social Media",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Verwendung in sozialen Medien",
+  "idPersonTyp": 2,
+  "sortierung": 2,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Presse",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Verwendung in der Presse",
+  "idPersonTyp": 2,
+  "sortierung": 3,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Werbung",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Verwendung für Werbezwecke",
+  "idPersonTyp": 2,
+  "sortierung": 4,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Externe Partner",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Weitergabe an externe Partner",
+  "idPersonTyp": 1,
+  "sortierung": 5,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Forschung",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zur Verwendung für Forschungszwecke",
+  "idPersonTyp": 1,
+  "sortierung": 6,
+  "istSichtbar": true
+},
+{
+  "bezeichnung": "Einwilligung Newsletter",
+  "schluessel": "",
+  "beschreibung": "Einwilligung zum Erhalt von Newslettern",
+  "idPersonTyp": 1,
+  "sortierung": 7,
+  "istSichtbar": true
+}
+]
+}

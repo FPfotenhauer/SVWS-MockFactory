@@ -11,6 +11,9 @@ from check_server import load_config, check_server_alive
 from schema_manager import list_schemas, delete_schema
 from create_schema import create_schema
 from init_database import init_database
+from populate_fahrschuelerarten import populate_fahrschuelerarten
+from populate_einwilligungsarten import populate_einwilligungsarten
+from populate_foerderschwerpunkte import populate_foerderschwerpunkte
 
 
 def main():
@@ -47,6 +50,21 @@ def main():
         '--setup',
         action='store_true',
         help='Complete setup: create schema and initialize database'
+    )
+    parser.add_argument(
+        '--populate-fahrschuelerarten',
+        action='store_true',
+        help='Populate Fahrschuelerarten catalog with 15 entries'
+    )
+    parser.add_argument(
+        '--populate-einwilligungsarten',
+        action='store_true',
+        help='Populate Einwilligungsarten catalog from katalogdaten/einwilligungen.json'
+    )
+    parser.add_argument(
+        '--populate-foerderschwerpunkte',
+        action='store_true',
+        help='Populate Foerderschwerpunkte catalog based on school form'
     )
     
     args = parser.parse_args()
@@ -86,6 +104,15 @@ def main():
             return 1
         print("\n✓ Complete setup finished successfully!")
         return 0
+    elif args.populate_fahrschuelerarten:
+        created, failed = populate_fahrschuelerarten(config)
+        return 0 if failed == 0 else 1
+    elif args.populate_einwilligungsarten:
+        created, failed = populate_einwilligungsarten(config)
+        return 0 if failed == 0 else 1
+    elif args.populate_foerderschwerpunkte:
+        created, failed = populate_foerderschwerpunkte(config)
+        return 0 if failed == 0 else 1
     else:
         parser.print_help()
         return 0
