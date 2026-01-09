@@ -1,0 +1,14 @@
+{
+  "database": {
+    "server": "localhost",
+    "httpsport": 8443,
+    "schema": null,
+    "dbusername": null,
+    "dbpassword": null,
+    "username": "Admin",
+    "password": "",
+    "schulnummer": 123456,
+    "anzahllehrer": 100,
+    "anzahlschueler": 1200
+  }
+}
