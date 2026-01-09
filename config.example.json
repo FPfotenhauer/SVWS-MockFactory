@@ -3,6 +3,8 @@
     "server": "localhost",
     "httpsport": 8443,
     "schema": null,
+    "mariadbroot": null,
+    "mariadbdbrootpassword": null,
     "dbusername": null,
     "dbpassword": null,
     "username": "Admin",

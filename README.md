@@ -68,11 +68,21 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 - **server**: Hostname oder IP-Adresse des SVWS-Servers
 - **httpsport**: HTTPS-Port des Servers (Standard: 8443)
 - **schema**: Name des Datenbankschemas
-- **dbusername/dbpassword**: Zugangsdaten für Datenbankoperationen (z.B. Server-Status)
-- **username/password**: Zugangsdaten für administrative API-Operationen (z.B. Schema-Initialisierung)
+- **mariadbroot/mariadbdbrootpassword**: Root-Zugangsdaten für Admin-Operationen (Schema erstellen/löschen)
+- **dbusername/dbpassword**: Zugangsdaten für Datenbankoperationen (Server-Status)
+- **username/password**: Zugangsdaten für API-Operationen (Schema-Initialisierung)
 - **schulnummer**: Schulnummer für die Initialisierung
 - **anzahllehrer**: Anzahl zu generierender Lehrkräfte
 - **anzahlschueler**: Anzahl zu generierender Schüler
+
+## Sicherheit
+
+⚠️ **Wichtig**: Die `config.json` enthält sensitive Anmeldedaten und sollte **niemals** in die Versionskontrolle committed werden.
+
+- `.gitignore` ist bereits konfiguriert, um `config.json` zu ignorieren
+- Verwende `config.example.json` als Vorlage
+- Alle Credentials im Repository sind Platzhalter und keine echten Zugangsdaten
+- Schütze deine `config.json` vor unauthorisiertem Zugriff
 
 ## Verwendung
 
@@ -81,6 +91,16 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 ```bash
 python mockfactory.py --help
 ```
+
+### Komplettes Setup (empfohlen)
+
+Führt alle Schritte aus: Schema löschen (falls vorhanden) → Schema erstellen → Datenbank initialisieren:
+
+```bash
+python mockfactory.py --setup
+```
+
+Dies ist die einfachste Methode für ein komplettes Setup und wird empfohlen.
 
 ### Server-Status prüfen
 
@@ -99,9 +119,39 @@ python check_server.py
 **API-Endpunkt**: `GET /status/alive`  
 **Authentifizierung**: Basic Auth mit `dbusername` und `dbpassword`
 
+### Datenbank-Schema auflisten
+
+Zeigt alle vorhandenen Schemas:
+
+```bash
+python mockfactory.py --list-schemas
+```
+
+### Datenbank-Schema löschen
+
+Löscht das in `config.json` konfigurierte Schema:
+
+```bash
+python mockfactory.py --delete-schema
+```
+
+**API-Endpunkt**: `POST /api/schema/root/destroy/{schema}`  
+**Authentifizierung**: Basic Auth mit `mariadbroot` und `mariadbdbrootpassword`
+
+### Datenbank-Schema erstellen
+
+Erstellt ein neues Datenbank-Schema mit allen Tabellen, Indizes und Triggern:
+
+```bash
+python mockfactory.py --create-schema
+```
+
+**API-Endpunkt**: `POST /api/schema/root/create/{schema}`  
+**Authentifizierung**: Basic Auth mit `mariadbroot` und `mariadbdbrootpassword`
+
 ### Datenbank initialisieren
 
-Erstellt ein neues Schema und initialisiert es mit einer Schulnummer:
+Initialisiert das Schema mit einer Schulnummer:
 
 ```bash
 python mockfactory.py --init-db
