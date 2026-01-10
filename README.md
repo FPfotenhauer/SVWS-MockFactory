@@ -21,6 +21,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Vermerkarten (7 Einträge aus katalogdaten/vermerkarten.txt)
   - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
+- ✓ **Schulstammdaten patchen**: Aktualisiert Schulinformationen nach der Initialisierung mit Test-Werten
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -114,10 +115,10 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (13 Schritte):
+**Workflow** (14 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
-3. Datenbank initialisieren
+3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
 4. Fahrschülerarten befüllen (15 Einträge)
 5. Einwilligungsarten befüllen (7 Einträge)
 6. Förderschwerpunkte befüllen (schulformabhängig)
@@ -130,7 +131,30 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 13. Kindergarten befüllen (20 Einträge, nur bei Schulformen G, PS, S, V, WF)
 14. Schulen befüllen (190 NRW Schulen)
 
-### Betriebe befüllen (synthetisch)
+### Schulstammdaten patchen
+
+Aktualisiert die Schulstammdaten mit Testwerten nach der Datenbankinitialisierung:
+
+```bash
+python init_schooldata.py
+```
+
+**API-Endpunkt**: `PATCH /db/{schema}/schule/stammdaten`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Test-Werte**:
+- Bezeichnung 1: "Testschule aus gernerierten Daten"
+- Bezeichnung 2: "MockFactory Schule"
+- Bezeichnung 3: "Generierte Daten"
+- Straße: "Hauptstraße 76"
+- PLZ/Ort: "42287 Wuppertal"
+- Telefon: "012345-6876876"
+- Fax: "012345-6876877"
+- E-Mail: "mockschule@schule.example.com"
+- Web: "https://meineschule.de"
+
+Dieses Modul wird automatisch während des `--full-setup` Workflows nach der Datenbankinitialisierung aufgerufen, kann aber auch standalone ausgeführt werden.
+
+### Kindergarten befüllen (synthetisch)
 
 Erzeugt 150 Betriebe mit Zufallsdaten (Namen aus Nachnamen kombiniert, Straßen aus katalogdaten/Strassen.csv, zufällige Kontaktdaten) **inklusive je zwei Ansprechpartnern** (Herr aus vornamen_m.json, Frau aus vornamen_w.json, zufällige Telefonnummern, E-Mail: rufname.nachname@betrieb.example.com):
 

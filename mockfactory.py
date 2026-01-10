@@ -11,6 +11,7 @@ from check_server import load_config, check_server_alive
 from schema_manager import list_schemas, delete_schema
 from create_schema import create_schema
 from init_database import init_database
+from init_schooldata import patch_schulstammdaten
 from populate_fahrschuelerarten import populate_fahrschuelerarten
 from populate_einwilligungsarten import populate_einwilligungsarten
 from populate_foerderschwerpunkte import populate_foerderschwerpunkte
@@ -214,7 +215,12 @@ def main():
         if not init_database(config):
             print("Database initialization failed. Aborting setup.")
             return 1
-        print("✓ Database initialized successfully")
+        
+        # Patch Schulstammdaten with test values
+        if patch_schulstammdaten(config):
+            print("✓ Database initialized and Schulstammdaten patched successfully")
+        else:
+            print("✓ Database initialized (Schulstammdaten patch failed but continuing)")
         
         # Step 4: Populate Fahrschuelerarten
         print("\n[4/14] Populating Fahrschuelerarten catalog...")
