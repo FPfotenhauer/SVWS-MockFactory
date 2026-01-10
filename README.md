@@ -11,8 +11,9 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Datenbank initialisieren**: Schema mit Schulnummer und Schulinformationen initialisieren
 - ✓ **Kataloge füllen**: Automatische Befüllung der Schuldatenbank-Kataloge
   - Fahrschülerarten (15 Einträge)
-  - Einwilligungsarten (aus katalogdaten/einwilligungen.json)
-  - Förderschwerpunkte (schulformabhängig)
+  - Einwilligungsarten (7 Einträge aus katalogdaten/einwilligungen.json)
+  - Förderschwerpunkte (10+ Einträge, schulformabhängig)
+  - Floskelgruppen (11 Einträge aus katalogdaten/Floskelgruppenart.json)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -96,15 +97,32 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 python mockfactory.py --help
 ```
 
-### Komplettes Setup (empfohlen)
+### Komplettes Setup mit allen Katalogen (empfohlen)
 
-Führt alle Schritte aus: Schema löschen (falls vorhanden) → Schema erstellen → Datenbank initialisieren:
+Führt alle Schritte aus: Schema löschen → Schema erstellen → Datenbank initialisieren → alle Kataloge befüllen:
+
+```bash
+python mockfactory.py --full-setup
+```
+
+Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
+
+**Workflow** (7 Schritte):
+1. Server-Erreichbarkeit prüfen
+2. Datenbank-Schema erstellen
+3. Datenbank initialisieren
+4. Fahrschülerarten befüllen (15 Einträge)
+5. Einwilligungsarten befüllen (7 Einträge)
+6. Förderschwerpunkte befüllen (schulformabhängig)
+7. Floskelgruppen befüllen (11 Einträge)
+
+### Basis-Setup (Schema + Initialisierung)
+
+Führt nur die ersten 3 Schritte aus:
 
 ```bash
 python mockfactory.py --setup
 ```
-
-Dies ist die einfachste Methode für ein komplettes Setup und wird empfohlen.
 
 ### Server-Status prüfen
 
@@ -240,7 +258,37 @@ Beispiel für Gesamtschule (GE): 10 Förderschwerpunkte
 - Körperliche und motorische Entwicklung (KB)
 - Sprache (LB, SG)
 - und weitere
+#### Floskelgruppen
 
+Befüllt den Floskelgruppen-Katalog aus der JSON-Datei `katalogdaten/Floskelgruppenart.json`:
+
+```bash
+python mockfactory.py --populate-floskelgruppen
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schule/floskelgruppen/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/Floskelgruppenart.json
+
+Das Programm:
+1. Lädt die Floskelgruppen-Katalogdaten
+2. Extrahiert den neuesten History-Eintrag für jede Floskelgruppe
+3. Generiert automatisch Farben für die Benutzeroberfläche
+4. Trunckt Bezeichnungen auf maximal 50 Zeichen (API-Beschränkung)
+5. Erstellt alle 11 Einträge mit ihren Konfigurationen
+
+Floskelgruppen (11 Einträge):
+- ALLG: Allgemeine Floskeln
+- ASV: Floskeln für Arbeits- und Sozialverhalten
+- AUE: Floskeln für außerunterrichtliche Aktivitäten
+- FACH: Fachbezogene Floskeln
+- FSP: Bemerkungen zum Förderschwerpunkt
+- FOERD: Floskeln für Fördermaßnahmen
+- VERM: Floskeln für Vermerke
+- VERS: Bemerkung zur Versetzung
+- ZB: Floskeln für Zeugnisbemerkungen
+- LELS: Floskeln für Lernentwicklung und Leistungsstand
+- ÜG45: Floskeln für Übergangsempfehlungen
 ## Datendateien
 
 Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und Kataloge:
@@ -252,7 +300,8 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - `Strassen.csv`: Straßennamen für Adressdaten
 
 ### Katalogdaten
-- `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog
+- `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog (7 Einträge)
+- `katalogdaten/Floskelgruppenart.json`: Floskelgruppen-Katalog (11 Einträge)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
 
 ## Entwicklungsstatus
@@ -263,11 +312,13 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - Datenbank-Schema initialisieren
 - Katalog-Befüllung:
   - Fahrschülerarten (15 Einträge)
-  - Einwilligungsarten (aus JSON-Datei)
-  - Förderschwerpunkte (schulformabhängig)
+  - Einwilligungsarten (7 Einträge aus JSON-Datei)
+  - Förderschwerpunkte (10+ Einträge, schulformabhängig)
+  - Floskelgruppen (11 Einträge aus JSON-Datei)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow (alle Schritte auf einmal)
+- Complete Setup Workflow mit allen Katalogen (7 Schritte)
+- Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
 - Weitere Kataloge (Adressarten, Berufsfelder, etc.)

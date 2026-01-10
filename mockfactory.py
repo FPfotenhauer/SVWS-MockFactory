@@ -14,6 +14,7 @@ from init_database import init_database
 from populate_fahrschuelerarten import populate_fahrschuelerarten
 from populate_einwilligungsarten import populate_einwilligungsarten
 from populate_foerderschwerpunkte import populate_foerderschwerpunkte
+from populate_floskelgruppen import populate_floskelgruppen
 
 
 def main():
@@ -67,6 +68,11 @@ def main():
         help='Populate Foerderschwerpunkte catalog based on school form'
     )
     parser.add_argument(
+        '--populate-floskelgruppen',
+        action='store_true',
+        help='Populate Floskelgruppen catalog from katalogdaten/Floskelgruppenart.json'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -118,6 +124,9 @@ def main():
     elif args.populate_foerderschwerpunkte:
         created, failed = populate_foerderschwerpunkte(config)
         return 0 if failed == 0 else 1
+    elif args.populate_floskelgruppen:
+        created, failed = populate_floskelgruppen(config)
+        return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)
         print("SVWS Mock Factory - Complete Setup with All Catalogs")
@@ -161,12 +170,20 @@ def main():
             print(f"✓ Created {created} Einwilligungsarten entries")
         
         # Step 6: Populate Foerderschwerpunkte
-        print("\n[6/6] Populating Foerderschwerpunkte catalog...")
+        print("\n[6/7] Populating Foerderschwerpunkte catalog...")
         created, failed = populate_foerderschwerpunkte(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
         else:
             print(f"✓ Created {created} Foerderschwerpunkte entries")
+        
+        # Step 7: Populate Floskelgruppen
+        print("\n[7/7] Populating Floskelgruppen catalog...")
+        created, failed = populate_floskelgruppen(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Floskelgruppen entries")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
