@@ -18,6 +18,8 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Floskeln (47 Einträge aus katalogdaten/Floskeln.csv)
   - Haltestellen (10 Einträge aus katalogdaten/haltestellen.txt mit Zufallsdistanzen)
   - Lernplattformen (Einträge aus katalogdaten/lernplattformen.txt)
+  - Vermerkarten (7 Einträge aus katalogdaten/vermerkarten.txt)
+  - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -111,18 +113,28 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (11 Schritte):
+**Workflow** (13 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren
-4. Schulen befüllen (190 NRW Schulen)
-5. Fahrschülerarten befüllen (15 Einträge)
-6. Einwilligungsarten befüllen (7 Einträge)
-7. Förderschwerpunkte befüllen (schulformabhängig)
-8. Floskelgruppen befüllen (11 Einträge)
-9. Floskeln befüllen (47 Einträge)
-10. Haltestellen befüllen (10 Einträge)
-11. Lernplattformen befüllen (aus Textdatei)
+4. Fahrschülerarten befüllen (15 Einträge)
+5. Einwilligungsarten befüllen (7 Einträge)
+6. Förderschwerpunkte befüllen (schulformabhängig)
+7. Floskelgruppen befüllen (11 Einträge)
+8. Floskeln befüllen (47 Einträge)
+9. Haltestellen befüllen (10 Einträge)
+10. Lernplattformen befüllen (aus Textdatei)
+11. Vermerkarten befüllen (7 Einträge aus Textdatei)
+12. Betriebe befüllen (150 synthetische Einträge mit je 2 Ansprechpartnern)
+13. Schulen befüllen (190 NRW Schulen)
+
+### Betriebe befüllen (synthetisch)
+
+Erzeugt 150 Betriebe mit Zufallsdaten (Namen aus Nachnamen kombiniert, Straßen aus katalogdaten/Strassen.csv, zufällige Kontaktdaten) **inklusive je zwei Ansprechpartnern** (Herr aus vornamen_m.json, Frau aus vornamen_w.json, zufällige Telefonnummern, E-Mail: rufname.nachname@betrieb.example.com):
+
+```bash
+python mockfactory.py --populate-betriebe
+```
 
 ### Basis-Setup (Schema + Initialisierung)
 
