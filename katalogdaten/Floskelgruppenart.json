@@ -1,0 +1,125 @@
+{
+	"version": 1,
+	"daten": [ {
+		"bezeichner": "ALLG",
+		"idStatistik": "0",
+		"historie": [ {
+			"id": 0,
+			"kuerzel": "ALLG",
+			"text": "Allgemeine Floskeln",
+			"schluessel": "ALLG",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "ASV",
+		"idStatistik": "1",
+		"historie": [ {
+			"id": 1,
+			"kuerzel": "ASV",
+			"text": "Floskeln für Arbeits- und Sozialverhalten",
+			"schluessel": "ASV",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "AUE",
+		"idStatistik": "2",
+		"historie": [ {
+			"id": 2,
+			"kuerzel": "AUE",
+			"text": "Flosken für außerunterrichtliches Engagement",
+			"schluessel": "AUE",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "FACH",
+		"idStatistik": "3",
+		"historie": [ {
+			"id": 3,
+			"kuerzel": "FACH",
+			"text": "Fachbezogene Floskeln",
+			"schluessel": "FACH",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "FSP",
+		"idStatistik": "4",
+		"historie": [ {
+			"id": 4,
+			"kuerzel": "FSP",
+			"text": "Bemerkungen zum Förderschwerpunkt",
+			"schluessel": "FSP",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "FOERD",
+		"idStatistik": "5",
+		"historie": [ {
+			"id": 5,
+			"kuerzel": "FOERD",
+			"text": "Flosken für Fördermaßnahmen",
+			"schluessel": "FOERD",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	}, {
+		"bezeichner": "VERM",
+		"idStatistik": "6",
+		"historie": [ {
+			"id": 6,
+			"kuerzel": "VERM",
+			"text": "Floskeln für Vermerke",
+			"schluessel": "VERM",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	},{
+		"bezeichner": "VERS",
+		"idStatistik": "7",
+		"historie": [ {
+			"id": 7,
+			"kuerzel": "VERS",
+			"text": "Bemerkung zur Versetzung",
+			"schluessel": "VERS",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	},{
+		"bezeichner": "ZB",
+		"idStatistik": "8",
+		"historie": [ {
+			"id": 8,
+			"kuerzel": "ZB",
+			"text": "Floskeln für Zeugnisbemerkungen",
+			"schluessel": "ZB",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	},{
+		"bezeichner": "LELS",
+		"idStatistik": "9",
+		"historie": [ {
+			"id": 9,
+			"kuerzel": "LELS",
+			"text": "Floskeln für allgemeine Lernentwicklung und Leistungsstand",
+			"schluessel": "LELS",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	},{
+		"bezeichner": "UEG45",
+		"idStatistik": "10",
+		"historie": [ {
+			"id": 10,
+			"kuerzel": "ÜG45",
+			"text": "Floskeln für die Übergangsempfehlung 4 nach 5",
+			"schluessel": "ÜG45",
+			"gueltigVon": null,
+			"gueltigBis": null
+		} ]
+	} ]
+}

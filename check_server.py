@@ -33,8 +33,8 @@ def check_server_alive(config):
     """
     server = config['database']['server']
     port = config['database']['httpsport']
-    username = config['database']['dbusername']
-    password = config['database']['dbpassword']
+    username = config['database']['mariadbroot']
+    password = config['database']['mariadbdbrootpassword']
     
     url = f"https://{server}:{port}/status/alive"
     
