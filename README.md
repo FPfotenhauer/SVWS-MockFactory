@@ -20,6 +20,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Lernplattformen (Einträge aus katalogdaten/lernplattformen.txt)
   - Vermerkarten (7 Einträge aus katalogdaten/vermerkarten.txt)
   - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
+  - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -126,7 +127,8 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 10. Lernplattformen befüllen (aus Textdatei)
 11. Vermerkarten befüllen (7 Einträge aus Textdatei)
 12. Betriebe befüllen (150 synthetische Einträge mit je 2 Ansprechpartnern)
-13. Schulen befüllen (190 NRW Schulen)
+13. Kindergarten befüllen (20 Einträge, nur bei Schulformen G, PS, S, V, WF)
+14. Schulen befüllen (190 NRW Schulen)
 
 ### Betriebe befüllen (synthetisch)
 
@@ -135,6 +137,27 @@ Erzeugt 150 Betriebe mit Zufallsdaten (Namen aus Nachnamen kombiniert, Straßen 
 ```bash
 python mockfactory.py --populate-betriebe
 ```
+
+### Kindergarten befüllen (synthetisch)
+
+Erzeugt 20 Kindergarten-Einträge mit Zufallsdaten. **Nur für Schulformen G, PS, S, V oder WF** - bei anderen Schulformen wird die Befüllung übersprungen.
+
+```bash
+python mockfactory.py --populate-kindergarten
+```
+
+**API-Endpunkt**: `POST /db/{schema}/kindergarten/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/Strassen.csv (für Straßennamen)
+
+Das Programm:
+1. Prüft die Schulform über `/db/{schema}/schule/stammdaten`
+2. Generiert nur bei relevanten Schulformen (G, PS, S, V, WF) 20 Einträge
+3. Verwendet deutsche Kindergartennamen (z.B. "Kita Sonnenschein", "Kindergarten Regenbogen")
+4. Generiert Zufallsadressen (Straßen aus Strassen.csv, Wuppertaler PLZ)
+5. Erstellt realistische Telefonnummern (0202-######) und E-Mail-Adressen (kita1@kita.example.com)
+6. Verhindert Duplikate durch erweiterten Namenspool (50 Namen × 3 Präfixe × 8 Suffixe = 1.200 Kombinationen)
+7. Automatisches Retry bei Duplikaten (bis zu 3 Versuche mit neuen Namen)
 
 ### Basis-Setup (Schema + Initialisierung)
 
