@@ -15,6 +15,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
   - Floskelgruppen (11 Einträge aus katalogdaten/Floskelgruppenart.json)
   - Floskeln (47 Einträge aus katalogdaten/Floskeln.csv)
+  - Haltestellen (10 Einträge aus katalogdaten/haltestellen.txt mit Zufallsdistanzen)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -319,6 +320,38 @@ Die Floskeln enthalten Vorlagen mit Variablen wie:
 - `&Er%Sie&`: wird durch Pronomen ersetzt
 - `**text**`: markiert editierbare Felder im Zeugnis
 
+#### Haltestellen
+
+Befüllt den Haltestellen-Katalog (Bus- und Bahnhaltestellen) aus der Textdatei `katalogdaten/haltestellen.txt`:
+
+```bash
+python mockfactory.py --populate-haltestellen
+```
+
+**API-Endpunkt**: `POST /db/{schema}/haltestellen/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/haltestellen.txt
+
+Das Programm:
+1. Lädt die Haltestellen-Katalogdaten aus Textdatei (eine pro Zeile)
+2. Generiert für jede Haltestelle eine zufällige Entfernung (1-10 km zur Schule)
+3. Erstellt automatische Sortierungsnummern (1-10)
+4. Markiert alle Einträge als sichtbar in der Benutzeroberfläche
+
+Haltestellen (10 Einträge):
+1. Meckelstraße
+2. Fingscheid
+3. Hauptbahnhof
+4. Opernstraße
+5. Schwebebahnhof Alter Markt
+6. S-Bahn Unterbarmen
+7. Barmer Bahnhof
+8. Nordbahntrasse
+9. Haltestelle Skulpturenpark
+10. Schwebebahnstation Zoo
+
+Die Entfernung ist eine Zufallszahl zwischen 1 und 10 und wird zur Laufzeit generiert, so dass bei mehrfachem Ausführen unterschiedliche Daten entstehen.
+
 ## Datendateien
 
 Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und Kataloge:
@@ -333,6 +366,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog (7 Einträge)
 - `katalogdaten/Floskelgruppenart.json`: Floskelgruppen-Katalog (11 Einträge)
 - `katalogdaten/Floskeln.csv`: Floskeln-Katalog (47 Einträge)
+- `katalogdaten/haltestellen.txt`: Haltestellen-Katalog (10 Einträge)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
 
 ## Entwicklungsstatus
@@ -347,9 +381,10 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
   - Floskelgruppen (11 Einträge aus JSON-Datei)
   - Floskeln (47 Einträge aus CSV-Datei)
+  - Haltestellen (10 Einträge aus Text-Datei mit Zufallsdistanzen)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (8 Schritte)
+- Complete Setup Workflow mit allen Katalogen (9 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
