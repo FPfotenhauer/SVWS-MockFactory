@@ -16,6 +16,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Floskelgruppen (11 Einträge aus katalogdaten/Floskelgruppenart.json)
   - Floskeln (47 Einträge aus katalogdaten/Floskeln.csv)
   - Haltestellen (10 Einträge aus katalogdaten/haltestellen.txt mit Zufallsdistanzen)
+  - Lernplattformen (Einträge aus katalogdaten/lernplattformen.txt)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -109,7 +110,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (8 Schritte):
+**Workflow** (10 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren
@@ -118,6 +119,8 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 6. Förderschwerpunkte befüllen (schulformabhängig)
 7. Floskelgruppen befüllen (11 Einträge)
 8. Floskeln befüllen (47 Einträge)
+9. Haltestellen befüllen (10 Einträge)
+10. Lernplattformen befüllen (aus Textdatei)
 
 ### Basis-Setup (Schema + Initialisierung)
 
@@ -352,21 +355,38 @@ Haltestellen (10 Einträge):
 
 Die Entfernung ist eine Zufallszahl zwischen 1 und 10 und wird zur Laufzeit generiert, so dass bei mehrfachem Ausführen unterschiedliche Daten entstehen.
 
+#### Lernplattformen
+
+Befüllt den Lernplattformen-Katalog aus der Textdatei `katalogdaten/lernplattformen.txt`:
+
+```bash
+python mockfactory.py --populate-lernplattformen
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schule/lernplattformen/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/lernplattformen.txt
+
+Das Programm:
+1. Lädt die Lernplattformen aus der Textdatei (eine Plattform pro Zeile)
+2. Erstellt einen Eintrag mit der Bezeichnung
+
 ## Datendateien
 
 Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und Kataloge:
 
 ### Namensdaten
-- `vornamen_m.json`: Männliche Vornamen
-- `vornamen_w.json`: Weibliche Vornamen
-- `nachnamen.json`: Nachnamen
-- `Strassen.csv`: Straßennamen für Adressdaten
+- `katalogdaten/vornamen_m.json`: Männliche Vornamen
+- `katalogdaten/vornamen_w.json`: Weibliche Vornamen
+- `katalogdaten/nachnamen.json`: Nachnamen
+- `katalogdaten/Strassen.csv`: Straßennamen für Adressdaten
 
 ### Katalogdaten
 - `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog (7 Einträge)
 - `katalogdaten/Floskelgruppenart.json`: Floskelgruppen-Katalog (11 Einträge)
 - `katalogdaten/Floskeln.csv`: Floskeln-Katalog (47 Einträge)
 - `katalogdaten/haltestellen.txt`: Haltestellen-Katalog (10 Einträge)
+- `katalogdaten/lernplattformen.txt`: Lernplattformen-Katalog (Einträge pro Zeile)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
 
 ## Entwicklungsstatus
@@ -382,9 +402,10 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Floskelgruppen (11 Einträge aus JSON-Datei)
   - Floskeln (47 Einträge aus CSV-Datei)
   - Haltestellen (10 Einträge aus Text-Datei mit Zufallsdistanzen)
+  - Lernplattformen (Einträge aus Text-Datei)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (9 Schritte)
+- Complete Setup Workflow mit allen Katalogen (10 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
