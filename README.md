@@ -14,6 +14,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Einwilligungsarten (7 Einträge aus katalogdaten/einwilligungen.json)
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
   - Floskelgruppen (11 Einträge aus katalogdaten/Floskelgruppenart.json)
+  - Floskeln (47 Einträge aus katalogdaten/Floskeln.csv)
 - 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
@@ -107,7 +108,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (7 Schritte):
+**Workflow** (8 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren
@@ -115,6 +116,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 5. Einwilligungsarten befüllen (7 Einträge)
 6. Förderschwerpunkte befüllen (schulformabhängig)
 7. Floskelgruppen befüllen (11 Einträge)
+8. Floskeln befüllen (47 Einträge)
 
 ### Basis-Setup (Schema + Initialisierung)
 
@@ -289,6 +291,34 @@ Floskelgruppen (11 Einträge):
 - ZB: Floskeln für Zeugnisbemerkungen
 - LELS: Floskeln für Lernentwicklung und Leistungsstand
 - ÜG45: Floskeln für Übergangsempfehlungen
+
+#### Floskeln
+
+Befüllt den Floskeln-Katalog (Zeugnisbemerkungen und Bewertungstext-Snippets) aus der CSV-Datei `katalogdaten/Floskeln.csv`:
+
+```bash
+python mockfactory.py --populate-floskeln
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schule/floskeln/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/Floskeln.csv
+
+Das Programm:
+1. Lädt die Floskeln-Katalogdaten aus CSV
+2. Ordnet die Einträge zu ihren Floskelgruppen
+3. Parst Jahrgänge aus komma-separierten Werten (leer wenn nicht spezifiziert)
+4. Erstellt alle Einträge mit Nummer, Text, Fach, Niveau und Jahrgänge-Zuordnung
+
+Floskeln (47 Einträge):
+- 24 Bemerkungen zum Förderschwerpunkt (#2359-#2382)
+- 23 Floskeln für Arbeits- und Sozialverhalten (#ASV001-#ASV023)
+
+Die Floskeln enthalten Vorlagen mit Variablen wie:
+- `$Vorname$`: wird durch den Vornamen des Schülers ersetzt
+- `&Er%Sie&`: wird durch Pronomen ersetzt
+- `**text**`: markiert editierbare Felder im Zeugnis
+
 ## Datendateien
 
 Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und Kataloge:
@@ -302,6 +332,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 ### Katalogdaten
 - `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog (7 Einträge)
 - `katalogdaten/Floskelgruppenart.json`: Floskelgruppen-Katalog (11 Einträge)
+- `katalogdaten/Floskeln.csv`: Floskeln-Katalog (47 Einträge)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
 
 ## Entwicklungsstatus
@@ -315,9 +346,10 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Einwilligungsarten (7 Einträge aus JSON-Datei)
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
   - Floskelgruppen (11 Einträge aus JSON-Datei)
+  - Floskeln (47 Einträge aus CSV-Datei)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (7 Schritte)
+- Complete Setup Workflow mit allen Katalogen (8 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧

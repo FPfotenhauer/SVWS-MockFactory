@@ -15,6 +15,7 @@ from populate_fahrschuelerarten import populate_fahrschuelerarten
 from populate_einwilligungsarten import populate_einwilligungsarten
 from populate_foerderschwerpunkte import populate_foerderschwerpunkte
 from populate_floskelgruppen import populate_floskelgruppen
+from populate_floskeln import populate_floskeln
 
 
 def main():
@@ -73,6 +74,11 @@ def main():
         help='Populate Floskelgruppen catalog from katalogdaten/Floskelgruppenart.json'
     )
     parser.add_argument(
+        '--populate-floskeln',
+        action='store_true',
+        help='Populate Floskeln (snippets) from katalogdaten/Floskeln.csv'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -127,34 +133,37 @@ def main():
     elif args.populate_floskelgruppen:
         created, failed = populate_floskelgruppen(config)
         return 0 if failed == 0 else 1
+    elif args.populate_floskeln:
+        created, failed = populate_floskeln(config)
+        return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)
         print("SVWS Mock Factory - Complete Setup with All Catalogs")
         print("=" * 70)
         
         # Step 1: Check server
-        print("\n[1/5] Checking server connectivity...")
+        print("\n[1/6] Checking server connectivity...")
         if not check_server_alive(config):
             print("Server is not accessible. Aborting setup.")
             return 1
         print("✓ Server is alive")
         
         # Step 2: Create schema
-        print("\n[2/5] Creating schema...")
+        print("\n[2/6] Creating schema...")
         if not create_schema(config):
             print("Schema creation failed. Aborting setup.")
             return 1
         print("✓ Schema created successfully")
         
         # Step 3: Initialize database
-        print("\n[3/5] Initializing database...")
+        print("\n[3/6] Initializing database...")
         if not init_database(config):
             print("Database initialization failed. Aborting setup.")
             return 1
         print("✓ Database initialized successfully")
         
         # Step 4: Populate Fahrschuelerarten
-        print("\n[4/5] Populating Fahrschuelerarten catalog...")
+        print("\n[4/6] Populating Fahrschuelerarten catalog...")
         created, failed = populate_fahrschuelerarten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -170,7 +179,7 @@ def main():
             print(f"✓ Created {created} Einwilligungsarten entries")
         
         # Step 6: Populate Foerderschwerpunkte
-        print("\n[6/7] Populating Foerderschwerpunkte catalog...")
+        print("\n[6/6] Populating Foerderschwerpunkte catalog...")
         created, failed = populate_foerderschwerpunkte(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -178,12 +187,20 @@ def main():
             print(f"✓ Created {created} Foerderschwerpunkte entries")
         
         # Step 7: Populate Floskelgruppen
-        print("\n[7/7] Populating Floskelgruppen catalog...")
+        print("\n[7/8] Populating Floskelgruppen catalog...")
         created, failed = populate_floskelgruppen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
         else:
             print(f"✓ Created {created} Floskelgruppen entries")
+        
+        # Step 8: Populate Floskeln
+        print("\n[8/8] Populating Floskeln (snippets) catalog...")
+        created, failed = populate_floskeln(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Floskeln entries")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
