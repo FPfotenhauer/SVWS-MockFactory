@@ -10,6 +10,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Datenbank-Schema verwalten**: Erstellen, löschen, auflisten
 - ✓ **Datenbank initialisieren**: Schema mit Schulnummer und Schulinformationen initialisieren
 - ✓ **Kataloge füllen**: Automatische Befüllung der Schuldatenbank-Kataloge
+  - Schulen (190 NRW Schulen aus katalogdaten/Schulen.csv mit idSchulform-Mapping)
   - Fahrschülerarten (15 Einträge)
   - Einwilligungsarten (7 Einträge aus katalogdaten/einwilligungen.json)
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
@@ -110,17 +111,18 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (10 Schritte):
+**Workflow** (11 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren
-4. Fahrschülerarten befüllen (15 Einträge)
-5. Einwilligungsarten befüllen (7 Einträge)
-6. Förderschwerpunkte befüllen (schulformabhängig)
-7. Floskelgruppen befüllen (11 Einträge)
-8. Floskeln befüllen (47 Einträge)
-9. Haltestellen befüllen (10 Einträge)
-10. Lernplattformen befüllen (aus Textdatei)
+4. Schulen befüllen (190 NRW Schulen)
+5. Fahrschülerarten befüllen (15 Einträge)
+6. Einwilligungsarten befüllen (7 Einträge)
+7. Förderschwerpunkte befüllen (schulformabhängig)
+8. Floskelgruppen befüllen (11 Einträge)
+9. Floskeln befüllen (47 Einträge)
+10. Haltestellen befüllen (10 Einträge)
+11. Lernplattformen befüllen (aus Textdatei)
 
 ### Basis-Setup (Schema + Initialisierung)
 
@@ -200,6 +202,33 @@ Die Initialisierung erstellt die Schulstruktur mit:
 - Kontaktinformationen
 - Schuljahresabschnitte
 - Grundeinstellungen
+
+### Schulen befüllen
+
+Befüllt den Schulen-Katalog mit 190 NRW Schulen aus der CSV-Datei `katalogdaten/Schulen.csv`:
+
+```bash
+python mockfactory.py --populate-schulen
+```
+
+**API-Endpunkt**: `POST /db/{schema}/schule/schulen/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/Schulen.csv (190 Einträge), statistikdaten/Schulform.json
+
+Das Programm:
+1. Konvertiert CSV-Daten zu SVWS-kompatiblem JSON-Format
+2. Mappt die Schulform-Abkürzung (z.B. "BK", "G", "GY") zur idSchulform
+   - Liest statistikdaten/Schulform.json für die Schulform-ID-Zuordnung
+   - Verwendet die ID aus dem erste History-Eintrag (z.B. "BK" → 1000)
+3. Generiert Email-Adressen im Format `{schulnummer}@schule.nrw.de`
+4. Bereinigt Telefon-/Fax-Nummern (entfernt Bindestriche)
+5. Erstellt alle 190 Schulen mit korrekten Schulform-IDs
+
+Schulen (190 Einträge):
+- 16 Schulformtypen (BK, G, GY, H, R, GE, SK, V, FÖ, PS, WB, etc.)
+- NRW-weite Abdeckung mit Adressdaten
+- Schulnummern, Kürzel und Kurzbezeichnungen
+- Telefon-, Fax- und Email-Kontakte
 
 ### Katalogdaten befüllen
 
@@ -383,11 +412,13 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 
 ### Katalogdaten
 - `katalogdaten/einwilligungen.json`: Einwilligungsarten-Katalog (7 Einträge)
+- `katalogdaten/Schulen.csv`: Schulen-Katalog (190 NRW Schulen)
 - `katalogdaten/Floskelgruppenart.json`: Floskelgruppen-Katalog (11 Einträge)
 - `katalogdaten/Floskeln.csv`: Floskeln-Katalog (47 Einträge)
 - `katalogdaten/haltestellen.txt`: Haltestellen-Katalog (10 Einträge)
 - `katalogdaten/lernplattformen.txt`: Lernplattformen-Katalog (Einträge pro Zeile)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
+- `statistikdaten/Schulform.json`: Schulform-Katalog mit IDs für Schulform-Mapping
 
 ## Entwicklungsstatus
 
@@ -396,6 +427,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - Datenbank-Schema erstellen, löschen, auflisten
 - Datenbank-Schema initialisieren
 - Katalog-Befüllung:
+  - Schulen (190 NRW Schulen mit idSchulform-Mapping aus Schulform.json)
   - Fahrschülerarten (15 Einträge)
   - Einwilligungsarten (7 Einträge aus JSON-Datei)
   - Förderschwerpunkte (10+ Einträge, schulformabhängig)
@@ -405,7 +437,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Lernplattformen (Einträge aus Text-Datei)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (10 Schritte)
+- Complete Setup Workflow mit allen Katalogen (11 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧

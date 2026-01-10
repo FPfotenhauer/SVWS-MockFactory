@@ -18,6 +18,7 @@ from populate_floskelgruppen import populate_floskelgruppen
 from populate_floskeln import populate_floskeln
 from populate_haltestellen import populate_haltestellen
 from populate_lernplattformen import populate_lernplattformen
+from populate_schulen import populate_schulen
 
 
 def main():
@@ -91,6 +92,11 @@ def main():
         help='Populate Lernplattformen from katalogdaten/lernplattformen.txt'
     )
     parser.add_argument(
+        '--populate-schulen',
+        action='store_true',
+        help='Populate Schulen (schools) from katalogdaten/schulen.json'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -154,6 +160,9 @@ def main():
     elif args.populate_lernplattformen:
         created, failed = populate_lernplattformen(config)
         return 0 if failed == 0 else 1
+    elif args.populate_schulen:
+        created, failed = populate_schulen(config)
+        return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)
         print("SVWS Mock Factory - Complete Setup with All Catalogs")
@@ -205,7 +214,7 @@ def main():
             print(f"✓ Created {created} Foerderschwerpunkte entries")
         
         # Step 7: Populate Floskelgruppen
-        print("\n[7/10] Populating Floskelgruppen catalog...")
+        print("\n[7/11] Populating Floskelgruppen catalog...")
         created, failed = populate_floskelgruppen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -213,7 +222,7 @@ def main():
             print(f"✓ Created {created} Floskelgruppen entries")
         
         # Step 8: Populate Floskeln
-        print("\n[8/10] Populating Floskeln (snippets) catalog...")
+        print("\n[8/11] Populating Floskeln (snippets) catalog...")
         created, failed = populate_floskeln(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -221,7 +230,7 @@ def main():
             print(f"✓ Created {created} Floskeln entries")
         
         # Step 9: Populate Haltestellen
-        print("\n[9/10] Populating Haltestellen (bus stops) catalog...")
+        print("\n[9/11] Populating Haltestellen (bus stops) catalog...")
         created, failed = populate_haltestellen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -229,12 +238,20 @@ def main():
             print(f"✓ Created {created} Haltestellen entries")
 
         # Step 10: Populate Lernplattformen
-        print("\n[10/10] Populating Lernplattformen catalog...")
+        print("\n[10/11] Populating Lernplattformen catalog...")
         created, failed = populate_lernplattformen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
         else:
             print(f"✓ Created {created} Lernplattformen entries")
+
+        # Step 11: Populate Schulen
+        print("\n[11/11] Populating Schulen (schools) catalog...")
+        created, failed = populate_schulen(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Schulen entries")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
