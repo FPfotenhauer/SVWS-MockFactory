@@ -25,6 +25,7 @@ from populate_betriebe import populate_betriebe
 from populate_kindergarten import populate_kindergarten
 from populate_lehrer import populate_lehrer
 from patch_lehrer_personaldaten import patch_lehrer_personaldaten
+from populate_classes import populate_classes, assign_class_leaders
 
 
 def main():
@@ -128,6 +129,11 @@ def main():
         help='Patch existing Lehrer records with Personaldaten'
     )
     parser.add_argument(
+        '--populate-classes',
+        action='store_true',
+        help='Populate K_Klassen (classes) with dynamic generation and assign teachers'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -208,6 +214,12 @@ def main():
         return 0 if failed == 0 else 1
     elif args.patch_lehrer_personaldaten:
         patched, failed = patch_lehrer_personaldaten(config)
+        return 0 if failed == 0 else 1
+    elif args.populate_classes:
+        created, failed = populate_classes(config)
+        if failed > 0:
+            return 1
+        assigned, failed = assign_class_leaders(config)
         return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)
@@ -321,7 +333,7 @@ def main():
             print(f"✓ Created {created} Kindergarten entries")
 
         # Step 14: Populate Schulen
-        print("\n[14/15] Populating Schulen (schools) catalog...")
+        print("\n[14/17] Populating Schulen (schools) catalog...")
         created, failed = populate_schulen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -329,7 +341,7 @@ def main():
             print(f"✓ Created {created} Schulen entries")
 
         # Step 15: Populate Lehrer
-        print("\n[15/16] Populating Lehrer (teachers) catalog...")
+        print("\n[15/17] Populating Lehrer (teachers) catalog...")
         created, failed = populate_lehrer(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -337,12 +349,26 @@ def main():
             print(f"✓ Created {created} Lehrer entries")
         
         # Step 16: Patch Lehrer Personaldaten
-        print("\n[16/16] Patching Lehrer Personaldaten...")
+        print("\n[16/17] Patching Lehrer Personaldaten...")
         patched, failed = patch_lehrer_personaldaten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to patch")
         else:
             print(f"✓ Patched {patched} Lehrer Personaldaten entries")
+        
+        # Step 17: Populate Classes and Assign Teachers
+        print("\n[17/17] Populating K_Klassen (classes) and assigning teachers...")
+        created, failed = populate_classes(config)
+        if failed > 0:
+            print(f"Warning: {failed} classes failed to create")
+        else:
+            print(f"✓ Created {created} classes")
+        
+        assigned, failed = assign_class_leaders(config)
+        if failed > 0:
+            print(f"Warning: {failed} class teacher assignments failed")
+        else:
+            print(f"✓ Assigned teachers to {assigned} classes")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
