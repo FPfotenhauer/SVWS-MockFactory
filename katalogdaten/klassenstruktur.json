@@ -59,9 +59,9 @@
       "name": "Berufskolleg und Förderschule Berufskolleg",
       "schulformen": ["BK", "SB"],
       "jahrgaenge": [
-        {"kuerzel": "11", "beschreibung": "Jahrgang 11", "prefix": "BK"},
-        {"kuerzel": "12", "beschreibung": "Jahrgang 12", "prefix": "BK"},
-        {"kuerzel": "13", "beschreibung": "Jahrgang 13", "prefix": "BK"}
+        {"kuerzel": "01", "beschreibung": "Jahrgang 01", "prefix": "Fachklasse "},
+        {"kuerzel": "02", "beschreibung": "Jahrgang 02", "prefix": "Fachklasse "},
+        {"kuerzel": "03", "beschreibung": "Jahrgang 03", "prefix": "Fachklasse "}
       ]
     }
   ]
