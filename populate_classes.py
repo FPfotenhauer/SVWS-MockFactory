@@ -154,6 +154,12 @@ def populate_classes(config) -> Tuple[int, int]:
     print(f"Schulform: {schulform}")
     print(f"idSchuljahresabschnitt: {id_schuljahresabschnitt}")
     
+    # Check if BK/SB (requires Fachklassen data)
+    if schulform in ['BK', 'SB']:
+        print(f"⚠️  Schulform '{schulform}' benötigt Fachklassen-Konfiguration in der Datenbank")
+        print("   Klassen-Erstellung für BK/SB wird übersprungen")
+        return 0, 0
+    
     # Find matching schulform group
     group = find_schulform_group(schulform, struktur)
     if not group:
@@ -278,18 +284,34 @@ def populate_classes(config) -> Tuple[int, int]:
             
             beschreibung = f"Klasse {kuerzel}"
             
-            payload = {
-                'idSchuljahresabschnitt': id_schuljahresabschnitt,
-                'kuerzel': kuerzel,
-                'idJahrgang': jg_id,
-                'parallelitaet': parallelitaet,
-                'sortierung': sortierung,
-                'beschreibung': beschreibung,
-                'idAllgemeinbildendOrganisationsform': 3001001,  # Standard value
-                'idKlassenart': 7002,  # Standard Klassenart
-            }
-            if not omit_schulgliederung:
-                payload['idSchulgliederung'] = 0
+            # Set fields based on Schulform
+            # BK/SB (vocational schools) use different organizational form and klassenart
+            if schulform in ['BK', 'SB']:
+                payload = {
+                    'idSchuljahresabschnitt': id_schuljahresabschnitt,
+                    'kuerzel': kuerzel,
+                    'idJahrgang': jg_id,
+                    'parallelitaet': parallelitaet,
+                    'sortierung': sortierung,
+                    'beschreibung': beschreibung,
+                    'idBerufsbildendOrganisationsform': 1005000,  # Vocational organization form
+                    'idKlassenart': 7001,  # Vocational class type
+                    'idSchulgliederung': 1001000,  # BK Schulgliederung
+                }
+            else:
+                # General education schools
+                payload = {
+                    'idSchuljahresabschnitt': id_schuljahresabschnitt,
+                    'kuerzel': kuerzel,
+                    'idJahrgang': jg_id,
+                    'parallelitaet': parallelitaet,
+                    'sortierung': sortierung,
+                    'beschreibung': beschreibung,
+                    'idAllgemeinbildendOrganisationsform': 3001001,  # Standard value
+                    'idKlassenart': 7002,  # Standard Klassenart
+                }
+                if not omit_schulgliederung:
+                    payload['idSchulgliederung'] = 0
             
             sortierung += 1  # Increment for next class
             
@@ -345,18 +367,32 @@ def populate_classes(config) -> Tuple[int, int]:
         parallelitaet = 'A'  # Standard for single Oberstufe class
         beschreibung = f"Jahrgang {jg_kuerzel}"
         
-        payload = {
-            'idSchuljahresabschnitt': id_schuljahresabschnitt,
-            'kuerzel': kuerzel,
-            'idJahrgang': jg_id,
-            'parallelitaet': parallelitaet,
-            'sortierung': sortierung,
-            'beschreibung': beschreibung,
-            'idAllgemeinbildendOrganisationsform': 3001001,  # Standard value
-            'idKlassenart': 7002,  # Standard Klassenart
-        }
-        if not omit_schulgliederung:
-            payload['idSchulgliederung'] = 0
+        # Set fields based on Schulform
+        if schulform in ['BK', 'SB']:
+            payload = {
+                'idSchuljahresabschnitt': id_schuljahresabschnitt,
+                'kuerzel': kuerzel,
+                'idJahrgang': jg_id,
+                'parallelitaet': parallelitaet,
+                'sortierung': sortierung,
+                'beschreibung': beschreibung,
+                'idBerufsbildendOrganisationsform': 1005000,
+                'idKlassenart': 7001,
+                'idSchulgliederung': 1001000,
+            }
+        else:
+            payload = {
+                'idSchuljahresabschnitt': id_schuljahresabschnitt,
+                'kuerzel': kuerzel,
+                'idJahrgang': jg_id,
+                'parallelitaet': parallelitaet,
+                'sortierung': sortierung,
+                'beschreibung': beschreibung,
+                'idAllgemeinbildendOrganisationsform': 3001001,
+                'idKlassenart': 7002,
+            }
+            if not omit_schulgliederung:
+                payload['idSchulgliederung'] = 0
         
         sortierung += 1  # Increment for next class
         
