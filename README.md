@@ -21,8 +21,9 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Vermerkarten (7 Einträge aus katalogdaten/vermerkarten.txt)
   - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
+  - Lehrkräfte (konfigurierbare Anzahl, standardmäßig 100 aus config.json)
 - ✓ **Schulstammdaten patchen**: Aktualisiert Schulinformationen nach der Initialisierung mit Test-Werten
-- 🚧 **Lehrkräfte generieren**: Realistische Lehrkräftedaten erstellen (in Entwicklung)
+- ✓ **Lehrkräfte generieren**: Realistische Lehrkräftedaten mit Geschlecht, Titel, Amtsbezeichnung, Adressen und Kontaktdaten
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
 ## Installation
@@ -115,7 +116,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (14 Schritte):
+**Workflow** (15 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -130,6 +131,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 12. Betriebe befüllen (150 synthetische Einträge mit je 2 Ansprechpartnern)
 13. Kindergarten befüllen (20 Einträge, nur bei Schulformen G, PS, S, V, WF)
 14. Schulen befüllen (190 NRW Schulen)
+15. Lehrkräfte befüllen (konfigurierbare Anzahl, standardmäßig 100)
 
 ### Schulstammdaten patchen
 
@@ -169,6 +171,55 @@ Erzeugt 20 Kindergarten-Einträge mit Zufallsdaten. **Nur für Schulformen G, PS
 ```bash
 python mockfactory.py --populate-kindergarten
 ```
+
+### Lehrkräfte befüllen (synthetisch)
+
+Erzeugt realistische Lehrkräfte-Datensätze mit zufällig generierten Daten. Die Anzahl wird aus `config.json` (`anzahllehrer`) gelesen (Standardwert: 100):
+
+```bash
+python mockfactory.py --populate-lehrer
+```
+
+**API-Endpunkt**: `POST /db/{schema}/lehrer/create`  
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quelle**: katalogdaten/nachnamen.json, vornamen_m.json, vornamen_w.json, Strassen.csv, /orte API
+
+Das Programm generiert für jede Lehrkraft:
+
+**Persönliche Daten**:
+- Kürzel: 4 Buchstaben des Nachnamens (uppercase), bei Duplikaten: 3 Buchstaben + Ziffer
+- Vorname: Zufällig aus vornamen_m.json (Männer) oder vornamen_w.json (Frauen)
+- Nachname: Zufällig aus nachnamen.json
+- Geschlecht: Balanciert 50% männlich (3) / 50% weiblich (4)
+- Titel: 10% erhalten Dr.
+
+**Amtsbezeichnung** (gewichtet):
+- 60% StR (Studienrat/Studienrätin)
+- 20% Lehrer
+- 10% OStR (Oberstudienrat)
+- 10% LiA (Lehramt in Ausbildung)
+
+**Geburtsdatum**: Zufällig generiert (Alter: 30-60 Jahre)
+
+**Staatsangehörigkeit**:
+- 90% DEU (Deutschland)
+- 5% TUR (Türkei)
+- 5% ITA (Italien)
+
+**Adresse**:
+- Straße: Zufällig aus katalogdaten/Strassen.csv
+- Hausnummer: Zufällig (1-199, ggf. mit Zusatz a, b, c)
+- Wohnort: Zufällig aus Wuppertal (via `/orte` API)
+
+**Kontaktdaten**:
+- Telefon: Format `012345-XXXXXX` (6-stellige Zufallszahl)
+- Telefon mobil: Format `012345-XXXXXX` (6-stellige Zufallszahl)
+- Email privat: `vorname.nachname@privat.l.example.com`
+- Email dienstlich: `vorname.nachname@dienstlich.l.example.com`
+
+**Sichtbarkeit**:
+- Alle Lehrkräfte sind sichtbar (`istSichtbar: true`)
+- Alle Lehrkräfte sind relevant für Statistik (`istRelevantFuerStatistik: true`)
 
 **API-Endpunkt**: `POST /db/{schema}/kindergarten/create`  
 **Authentifizierung**: Basic Auth mit `username` und `password`  
@@ -494,9 +545,12 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Floskeln (47 Einträge aus CSV-Datei)
   - Haltestellen (10 Einträge aus Text-Datei mit Zufallsdistanzen)
   - Lernplattformen (Einträge aus Text-Datei)
+  - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
+  - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
+  - Lehrkräfte (Zahl aus config.json, standardmäßig 100 mit Geschlechtsmix, Titel, Amtsbezeichnung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (11 Schritte)
+- Complete Setup Workflow mit allen Katalogen (15 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
