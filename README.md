@@ -22,8 +22,10 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
   - Lehrkräfte (konfigurierbare Anzahl, standardmäßig 100 aus config.json)
+  - Klassen (dynamisch basierend auf Schülerzahl und Schulform)
 - ✓ **Schulstammdaten patchen**: Aktualisiert Schulinformationen nach der Initialisierung mit Test-Werten
 - ✓ **Lehrkräfte generieren**: Realistische Lehrkräftedaten mit Geschlecht, Titel, Amtsbezeichnung, Adressen und Kontaktdaten
+- ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
 - 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
 
 ## Installation
@@ -133,7 +135,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 14. Schulen befüllen (190 NRW Schulen)
 15. Lehrkräfte befüllen (konfigurierbare Anzahl, standardmäßig 100)
 16. Lehrkräfte Personaldaten patchen
-17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl)
+17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl und Schulform)
 
 ### Schulstammdaten patchen
 
@@ -242,6 +244,56 @@ Das Programm generiert für jede Lehrkraft:
 - **zugangsgrund**: 'NEU' (fest)
 
 **Workflow**: `populate_lehrer.py` speichert bei der Erstellung Lehrkräfte-Daten in `.lehrer_cache.json`. `patch_lehrer_personaldaten.py` liest diese Cache-Datei und ergänzt die Personaldaten via PATCH. Die Cache-Datei wird ignoriert (`.gitignore`).
+
+### Klassen erstellen (dynamisch)
+
+Erstellt Klassen basierend auf der Schülerzahl und Schulform der Schule, mit automatischer Zuweisung von zwei Klassenleitungen pro Klasse:
+
+```bash
+python mockfactory.py --populate-classes
+```
+
+**API-Endpunkte**:
+- CREATE: `POST /db/{schema}/klassen/create`
+- PATCH: `PATCH /db/{schema}/klassen/{id}` (für Klassenleitungen)
+- GET: `GET /db/{schema}/schule/stammdaten` (für Schulform)
+- GET: `GET /db/{schema}/jahrgaenge` (für Jahrgangs-IDs)
+- GET: `GET /db/{schema}/lehrer` (für Lehrerliste)
+
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Quellen**: katalogdaten/klassenstruktur.json, config.json (anzahlschueler)
+
+Das Programm generiert Klassen dynamisch:
+
+**Berechnung**:
+- Klassengröße: ~25 Schüler pro Klasse
+- Anzahl Klassen = anzahlschueler / 25
+- Verteilung auf Jahrgänge: gleichmäßig basierend auf Schulform
+
+**Schulformspezifische Jahrgänge** (aus klassenstruktur.json):
+- **Grundschule & Förderschulen Primarstufe** (G, SG, FW): 01-04
+- **Gymnasium, Gesamtschule, Hibernia** (GY, GE, HI): 05-10, EF, Q1, Q2
+  - Jahrgänge 05-10: Mehrere Parallelklassen (05a, 05b, 06a, ...)
+  - **EF, Q1, Q2**: Jeweils **eine Klasse** ohne Suffix (EF, Q1, Q2) mit allen Schülern des Jahrgangs
+- **Haupt-, Real-, Sekundarschulen** (H, SK, R, SR, S, WF): 05-10
+- **PRIMUS, Klinikschule, Volksschule** (PS, KS, V): 01-10
+- **Berufskolleg** (BK, SB): ⚠️ Übersprungen (erfordert Fachklassen-Konfiguration in der Datenbank)
+
+**Klassennamen**:
+- Format: `{Prefix}{Jahrgang}{Suffix}` (z.B. "05a", "Fachklasse 01a")
+- Suffix: a-z, dann aa-az, ba-bz, ... (unterstützt bis zu 676 Parallelklassen)
+- Oberstufe (EF/Q1/Q2): Kein Suffix, nur Jahrgangsbezeichnung
+
+**Klassenleitungen**:
+- 2 Lehrer pro Klasse (automatisch zugewiesen)
+- Tracking: Max. 2 Klassen pro Lehrer bevorzugt
+- Fallback: Bei Lehrermangel werden Lehrer auch für mehr Klassen eingeteilt (mit Warnung)
+
+**Spezielle API-Anforderungen**:
+- Schulformen H/SK/R/SR/S: `idSchulgliederung` wird weggelassen (API-Validierung)
+- Schulformen BK/SB: Benötigen `idBerufsbildendOrganisationsform` und `idFachklasse` (derzeit übersprungen)
+
+**Cache**: Speichert erstellte Klassen-IDs in `.klassen_cache.json` für Klassenleiterzuweisung. Die Cache-Datei wird ignoriert (`.gitignore`).
 
 
 3. Verwendet deutsche Kindergartennamen (z.B. "Kita Sonnenschein", "Kindergarten Regenbogen")
@@ -543,6 +595,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - `katalogdaten/Floskeln.csv`: Floskeln-Katalog (47 Einträge)
 - `katalogdaten/haltestellen.txt`: Haltestellen-Katalog (10 Einträge)
 - `katalogdaten/lernplattformen.txt`: Lernplattformen-Katalog (Einträge pro Zeile)
+- `katalogdaten/klassenstruktur.json`: Klassenstruktur-Template (Jahrgänge pro Schulform)
 - `statistikdaten/Foerderschwerpunkt.json`: Förderschwerpunkt-Katalog (schulformabhängig)
 - `statistikdaten/Schulform.json`: Schulform-Katalog mit IDs für Schulform-Mapping
 
@@ -564,6 +617,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
   - Lehrkräfte (Zahl aus config.json, standardmäßig 100 mit Geschlechtsmix, Titel, Amtsbezeichnung)
+  - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
 - Complete Setup Workflow mit allen Katalogen (17 Schritte)
@@ -571,10 +625,10 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 
 ### In Planung 🚧
 - Weitere Kataloge (Adressarten, Berufsfelder, etc.)
-- Lehrkräfte mit realistischen Daten generieren
 - Schülerdaten mit realistischen Daten generieren
-- Klassen und Kurse erstellen
+- Klassen und Kurse erweitern (Schülerzuweisungen)
 - Stundenplan-Generierung
+- BK/SB Fachklassen-Unterstützung (erfordert Fachklassen-Konfiguration)
 
 ## Technische Details
 
