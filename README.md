@@ -116,7 +116,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (15 Schritte):
+**Workflow** (16 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -132,6 +132,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 13. Kindergarten befüllen (20 Einträge, nur bei Schulformen G, PS, S, V, WF)
 14. Schulen befüllen (190 NRW Schulen)
 15. Lehrkräfte befüllen (konfigurierbare Anzahl, standardmäßig 100)
+16. Lehrkräfte Personaldaten patchen
 
 ### Schulstammdaten patchen
 
@@ -177,14 +178,14 @@ python mockfactory.py --populate-kindergarten
 Erzeugt realistische Lehrkräfte-Datensätze mit zufällig generierten Daten. Die Anzahl wird aus `config.json` (`anzahllehrer`) gelesen (Standardwert: 100):
 
 ```bash
-# Schritt 1: Lehrkräfte erstellen (mit Cache-Datei)
+# Schritt 2: Lehrkräfte erstellen (mit Cache-Datei)
 python mockfactory.py --populate-lehrer
 
-# Schritt 2: Personaldaten hinzufügen (optional, verwendet Cache)
+# Schritt 3: Personaldaten hinzufügen (optional, verwendet Cache)
 python mockfactory.py --patch-lehrer-personaldaten
 ```
 
-Oder kombiniert im `--full-setup` (Schritt 14 & 15).
+Oder kombiniert im `--full-setup` (Schritte 15 & 16).
 
 **API-Endpunkte**:
 - CREATE: `POST /db/{schema}/lehrer/create`
@@ -564,7 +565,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Lehrkräfte (Zahl aus config.json, standardmäßig 100 mit Geschlechtsmix, Titel, Amtsbezeichnung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (15 Schritte)
+- Complete Setup Workflow mit allen Katalogen (16 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧

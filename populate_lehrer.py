@@ -156,6 +156,11 @@ def balanced_genders(count: int) -> List[int]:
 
 
 def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
+    # Clear old cache file to ensure fresh start with current anzahllehrer config
+    cache_file = Path(__file__).parent / '.lehrer_cache.json'
+    if cache_file.exists():
+        cache_file.unlink()
+    
     nachnamen = load_nachnamen()
     vornamen_m = load_vornamen('vornamen_m.json')
     vornamen_w = load_vornamen('vornamen_w.json')

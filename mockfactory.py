@@ -329,12 +329,20 @@ def main():
             print(f"✓ Created {created} Schulen entries")
 
         # Step 15: Populate Lehrer
-        print("\n[15/15] Populating Lehrer (teachers) catalog...")
+        print("\n[15/16] Populating Lehrer (teachers) catalog...")
         created, failed = populate_lehrer(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
         else:
             print(f"✓ Created {created} Lehrer entries")
+        
+        # Step 16: Patch Lehrer Personaldaten
+        print("\n[16/16] Patching Lehrer Personaldaten...")
+        patched, failed = patch_lehrer_personaldaten(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to patch")
+        else:
+            print(f"✓ Patched {patched} Lehrer Personaldaten entries")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
