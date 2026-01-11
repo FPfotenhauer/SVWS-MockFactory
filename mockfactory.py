@@ -24,6 +24,7 @@ from populate_vermerkarten import populate_vermerkarten
 from populate_betriebe import populate_betriebe
 from populate_kindergarten import populate_kindergarten
 from populate_lehrer import populate_lehrer
+from patch_lehrer_personaldaten import patch_lehrer_personaldaten
 
 
 def main():
@@ -122,6 +123,11 @@ def main():
         help='Populate Lehrer (teachers) catalog with synthetic data'
     )
     parser.add_argument(
+        '--patch-lehrer-personaldaten',
+        action='store_true',
+        help='Patch existing Lehrer records with Personaldaten'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -199,6 +205,9 @@ def main():
         return 0 if failed == 0 else 1
     elif args.populate_lehrer:
         created, failed = populate_lehrer(config)
+        return 0 if failed == 0 else 1
+    elif args.patch_lehrer_personaldaten:
+        patched, failed = patch_lehrer_personaldaten(config)
         return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)

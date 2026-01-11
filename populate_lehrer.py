@@ -1,6 +1,7 @@
 """
 Populate K_Lehrer with randomly generated teacher data.
 Creates a gender-balanced set of teachers based on config['database']['anzahllehrer'].
+Saves a cache file with teacher IDs and birthdate/gender for later Personaldaten patching.
 """
 
 import csv
@@ -85,6 +86,24 @@ def hausnummer() -> str:
     return f"{base}{suffix}"
 
 
+def format_ident_teil1(geburtsdatum: str, geschlecht: int) -> str:
+    """
+    Format identNrTeil1 from birthdate and gender.
+    Format: TTMMJJ (from YYYY-MM-DD) + geschlecht (3 or 4)
+    Example: 1812713 for 18.12.1980, male (3)
+    """
+    try:
+        parts = geburtsdatum.split('-')
+        if len(parts) != 3:
+            return None
+        year, month, day = parts[0], parts[1], parts[2]
+        # Take last 2 digits of year
+        year_short = year[-2:]
+        return f"{day}{month}{year_short}{geschlecht}"
+    except Exception:
+        return None
+
+
 def make_kuerzel(nachname: str, existing: Set[str]) -> str:
     cleaned = ''.join(ch for ch in nachname if ch.isalpha())
     base = (cleaned[:4] or cleaned).upper()
@@ -163,8 +182,13 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
 
     genders = balanced_genders(total)
     existing_kuerzel: Set[str] = set()
+    existing_idents: Set[str] = set()
     created = 0
     failed = 0
+    
+    # Today - 2 years for Zugangsdatum
+    today = date.today()
+    zugangsdatum = (today - timedelta(days=730)).isoformat()
 
     for idx in range(1, total + 1):
         geschlecht = genders[idx - 1]
@@ -172,6 +196,7 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
         vorname = RAND.choice(vornamen_m if is_male else vornamen_w)
         nachname = RAND.choice(nachnamen)
         kuerzel = make_kuerzel(nachname, existing_kuerzel)
+        geburtsdatum = random_birthdate()
 
         email_local = f"{slugify_mail_part(vorname)}.{slugify_mail_part(nachname)}"
 
@@ -186,6 +211,26 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             amts = 'OStR'
         else:
             amts = 'LiA'
+        
+        # Generate Personaldaten
+        ident_teil1 = format_ident_teil1(geburtsdatum, geschlecht)
+        if not ident_teil1:
+            print(f"[{idx}/{total}] {kuerzel} {vorname} {nachname}: ⚠️  Konnte identNrTeil1 nicht formatieren")
+            failed += 1
+            continue
+        
+        # Generate unique identNrTeil2SerNr
+        while True:
+            rand_3digit = str(RAND.randint(0, 999)).zfill(3)
+            ident_teil2 = f"{rand_3digit}X"
+            ident_combo = f"{ident_teil1}{ident_teil2}"
+            if ident_combo not in existing_idents:
+                existing_idents.add(ident_combo)
+                break
+        
+        # Generate random 8-digit numbers for personal IDs
+        personalaktennummer = f"PA{RAND.randint(10000000, 99999999)}"
+        lbvPersonalnummer = f"LB{RAND.randint(10000000, 99999999)}"
 
         payload = {
             'kuerzel': kuerzel,
@@ -196,7 +241,7 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             'nachname': nachname,
             'vorname': vorname,
             'geschlecht': geschlecht,
-            'geburtsdatum': random_birthdate(),
+            'geburtsdatum': geburtsdatum,
             'staatsangehoerigkeitID': pick_staatsangehoerigkeit(),
             'strassenname': RAND.choice(strassen),
             'hausnummer': hausnummer(),
@@ -206,8 +251,6 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             'telefon': random_phone(),
             'telefonMobil': random_phone(),
             'emailPrivat': f"{email_local}@privat.l.example.com",
-            'emailDienstlich': f"{email_local}@dienstlich.l.example.com",
-            'foto': '',
             'istSichtbar': True,
             'istRelevantFuerStatistik': True,
             'leitungsfunktionen': [],
@@ -236,6 +279,37 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             if resp.status_code in (200, 201):
                 created += 1
                 print(f"[{idx}/{total}] {kuerzel} {vorname} {nachname}: ✓ (HTTP {resp.status_code})")
+                
+                # Save to cache for later Personaldaten patching
+                try:
+                    response_data = resp.json()
+                    lehrer_id = response_data.get('id')
+                    if lehrer_id:
+                        cache_file = Path(__file__).parent / '.lehrer_cache.json'
+                        cache_data = []
+                        if cache_file.exists():
+                            with open(cache_file, 'r', encoding='utf-8') as f:
+                                cache_data = json.load(f)
+                        
+                        cache_data.append({
+                            'id': lehrer_id,
+                            'kuerzel': kuerzel,
+                            'vorname': vorname,
+                            'nachname': nachname,
+                            'geburtsdatum': geburtsdatum,
+                            'geschlecht': geschlecht,
+                            'identNrTeil1': ident_teil1,
+                            'identNrTeil2SerNr': ident_teil2,
+                            'personalaktennummer': personalaktennummer,
+                            'lbvPersonalnummer': lbvPersonalnummer,
+                            'zugangsdatum': zugangsdatum,
+                        })
+                        
+                        with open(cache_file, 'w', encoding='utf-8') as f:
+                            json.dump(cache_data, f, indent=2, ensure_ascii=False)
+                except Exception as e:
+                    # Cache write error doesn't fail the creation
+                    pass
             else:
                 try:
                     err = resp.json().get('message', resp.text)

@@ -177,12 +177,21 @@ python mockfactory.py --populate-kindergarten
 Erzeugt realistische Lehrkräfte-Datensätze mit zufällig generierten Daten. Die Anzahl wird aus `config.json` (`anzahllehrer`) gelesen (Standardwert: 100):
 
 ```bash
+# Schritt 1: Lehrkräfte erstellen (mit Cache-Datei)
 python mockfactory.py --populate-lehrer
+
+# Schritt 2: Personaldaten hinzufügen (optional, verwendet Cache)
+python mockfactory.py --patch-lehrer-personaldaten
 ```
 
-**API-Endpunkt**: `POST /db/{schema}/lehrer/create`  
+Oder kombiniert im `--full-setup` (Schritt 14 & 15).
+
+**API-Endpunkte**:
+- CREATE: `POST /db/{schema}/lehrer/create`
+- PATCH: `PATCH /db/{schema}/lehrer/{id}/personaldaten`
+
 **Authentifizierung**: Basic Auth mit `username` und `password`  
-**Quelle**: katalogdaten/nachnamen.json, vornamen_m.json, vornamen_w.json, Strassen.csv, /orte API
+**Quellen**: katalogdaten/nachnamen.json, vornamen_m.json, vornamen_w.json, Strassen.csv, /orte API
 
 Das Programm generiert für jede Lehrkraft:
 
@@ -221,13 +230,18 @@ Das Programm generiert für jede Lehrkraft:
 - Alle Lehrkräfte sind sichtbar (`istSichtbar: true`)
 - Alle Lehrkräfte sind relevant für Statistik (`istRelevantFuerStatistik: true`)
 
-**API-Endpunkt**: `POST /db/{schema}/kindergarten/create`  
-**Authentifizierung**: Basic Auth mit `username` und `password`  
-**Quelle**: katalogdaten/Strassen.csv (für Straßennamen)
+**Personaldaten** (via PATCH nach Erstellung):
+- **identNrTeil1**: TTMMJJG (Tag + Monat + Jahr + Geschlecht)
+- **identNrTeil2SerNr**: 3-stellige Zahl + 'X' (eindeutig pro Lehrkraft)
+- **personalaktennummer**: PA + 8-stellige Zufallszahl
+- **lbvPersonalnummer**: LB + 8-stellige Zufallszahl
+- **lbvVerguetungsschluessel**: 'A' (fest)
+- **zugangsdatum**: Heute - 2 Jahre
+- **zugangsgrund**: 'NEU' (fest)
 
-Das Programm:
-1. Prüft die Schulform über `/db/{schema}/schule/stammdaten`
-2. Generiert nur bei relevanten Schulformen (G, PS, S, V, WF) 20 Einträge
+**Workflow**: `populate_lehrer.py` speichert bei der Erstellung Lehrkräfte-Daten in `.lehrer_cache.json`. `patch_lehrer_personaldaten.py` liest diese Cache-Datei und ergänzt die Personaldaten via PATCH. Die Cache-Datei wird ignoriert (`.gitignore`).
+
+
 3. Verwendet deutsche Kindergartennamen (z.B. "Kita Sonnenschein", "Kindergarten Regenbogen")
 4. Generiert Zufallsadressen (Straßen aus Strassen.csv, Wuppertaler PLZ)
 5. Erstellt realistische Telefonnummern (0202-######) und E-Mail-Adressen (kita1@kita.example.com)
