@@ -256,6 +256,7 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             'telefon': random_phone(),
             'telefonMobil': random_phone(),
             'emailPrivat': f"{email_local}@privat.l.example.com",
+            'emailDienstlich': f"{email_local}@dienst.l.example.com",
             'istSichtbar': True,
             'istRelevantFuerStatistik': True,
             'leitungsfunktionen': [],
