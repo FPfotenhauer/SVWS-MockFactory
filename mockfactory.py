@@ -23,6 +23,9 @@ from populate_schulen import populate_schulen
 from populate_vermerkarten import populate_vermerkarten
 from populate_betriebe import populate_betriebe
 from populate_kindergarten import populate_kindergarten
+from populate_lehrer import populate_lehrer
+from patch_lehrer_personaldaten import patch_lehrer_personaldaten
+from populate_classes import populate_classes, assign_class_leaders
 
 
 def main():
@@ -116,6 +119,21 @@ def main():
         help='Populate Kindergarten catalog with synthetic data (only for G, PS, S, V, WF)'
     )
     parser.add_argument(
+        '--populate-lehrer',
+        action='store_true',
+        help='Populate Lehrer (teachers) catalog with synthetic data'
+    )
+    parser.add_argument(
+        '--patch-lehrer-personaldaten',
+        action='store_true',
+        help='Patch existing Lehrer records with Personaldaten'
+    )
+    parser.add_argument(
+        '--populate-classes',
+        action='store_true',
+        help='Populate K_Klassen (classes) with dynamic generation and assign teachers'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -191,27 +209,39 @@ def main():
     elif args.populate_kindergarten:
         created, failed = populate_kindergarten(config)
         return 0 if failed == 0 else 1
+    elif args.populate_lehrer:
+        created, failed = populate_lehrer(config)
+        return 0 if failed == 0 else 1
+    elif args.patch_lehrer_personaldaten:
+        patched, failed = patch_lehrer_personaldaten(config)
+        return 0 if failed == 0 else 1
+    elif args.populate_classes:
+        created, failed = populate_classes(config)
+        if failed > 0:
+            return 1
+        assigned, failed = assign_class_leaders(config)
+        return 0 if failed == 0 else 1
     elif args.full_setup:
         print("=" * 70)
         print("SVWS Mock Factory - Complete Setup with All Catalogs")
         print("=" * 70)
         
         # Step 1: Check server
-        print("\n[1/14] Checking server connectivity...")
+        print("\n[1/15] Checking server connectivity...")
         if not check_server_alive(config):
             print("Server is not accessible. Aborting setup.")
             return 1
         print("✓ Server is alive")
         
         # Step 2: Create schema
-        print("\n[2/14] Creating schema...")
+        print("\n[2/15] Creating schema...")
         if not create_schema(config):
             print("Schema creation failed. Aborting setup.")
             return 1
         print("✓ Schema created successfully")
         
         # Step 3: Initialize database
-        print("\n[3/14] Initializing database...")
+        print("\n[3/15] Initializing database...")
         if not init_database(config):
             print("Database initialization failed. Aborting setup.")
             return 1
@@ -223,7 +253,7 @@ def main():
             print("✓ Database initialized (Schulstammdaten patch failed but continuing)")
         
         # Step 4: Populate Fahrschuelerarten
-        print("\n[4/14] Populating Fahrschuelerarten catalog...")
+        print("\n[4/15] Populating Fahrschuelerarten catalog...")
         created, failed = populate_fahrschuelerarten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -231,7 +261,7 @@ def main():
             print(f"✓ Created {created} Fahrschuelerarten entries")
         
         # Step 5: Populate Einwilligungsarten
-        print("\n[5/14] Populating Einwilligungsarten catalog...")
+        print("\n[5/15] Populating Einwilligungsarten catalog...")
         created, failed = populate_einwilligungsarten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -239,7 +269,7 @@ def main():
             print(f"✓ Created {created} Einwilligungsarten entries")
         
         # Step 6: Populate Foerderschwerpunkte
-        print("\n[6/14] Populating Foerderschwerpunkte catalog...")
+        print("\n[6/15] Populating Foerderschwerpunkte catalog...")
         created, failed = populate_foerderschwerpunkte(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -247,7 +277,7 @@ def main():
             print(f"✓ Created {created} Foerderschwerpunkte entries")
         
         # Step 7: Populate Floskelgruppen
-        print("\n[7/14] Populating Floskelgruppen catalog...")
+        print("\n[7/15] Populating Floskelgruppen catalog...")
         created, failed = populate_floskelgruppen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -255,7 +285,7 @@ def main():
             print(f"✓ Created {created} Floskelgruppen entries")
         
         # Step 8: Populate Floskeln
-        print("\n[8/14] Populating Floskeln (snippets) catalog...")
+        print("\n[8/15] Populating Floskeln (snippets) catalog...")
         created, failed = populate_floskeln(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -263,7 +293,7 @@ def main():
             print(f"✓ Created {created} Floskeln entries")
         
         # Step 9: Populate Haltestellen
-        print("\n[9/14] Populating Haltestellen (bus stops) catalog...")
+        print("\n[9/15] Populating Haltestellen (bus stops) catalog...")
         created, failed = populate_haltestellen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -271,7 +301,7 @@ def main():
             print(f"✓ Created {created} Haltestellen entries")
 
         # Step 10: Populate Lernplattformen
-        print("\n[10/14] Populating Lernplattformen catalog...")
+        print("\n[10/15] Populating Lernplattformen catalog...")
         created, failed = populate_lernplattformen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -279,7 +309,7 @@ def main():
             print(f"✓ Created {created} Lernplattformen entries")
 
         # Step 11: Populate Vermerkarten
-        print("\n[11/14] Populating Vermerkarten catalog...")
+        print("\n[11/15] Populating Vermerkarten catalog...")
         created, failed = populate_vermerkarten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -287,7 +317,7 @@ def main():
             print(f"✓ Created {created} Vermerkarten entries")
 
         # Step 12: Populate Betriebe
-        print("\n[12/14] Populating Betriebe catalog...")
+        print("\n[12/15] Populating Betriebe catalog...")
         created, failed = populate_betriebe(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -295,7 +325,7 @@ def main():
             print(f"✓ Created {created} Betriebe entries")
 
         # Step 13: Populate Kindergarten
-        print("\n[13/14] Populating Kindergarten catalog...")
+        print("\n[13/15] Populating Kindergarten catalog...")
         created, failed = populate_kindergarten(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
@@ -303,12 +333,42 @@ def main():
             print(f"✓ Created {created} Kindergarten entries")
 
         # Step 14: Populate Schulen
-        print("\n[14/14] Populating Schulen (schools) catalog...")
+        print("\n[14/17] Populating Schulen (schools) catalog...")
         created, failed = populate_schulen(config)
         if failed > 0:
             print(f"Warning: {failed} entries failed to create")
         else:
             print(f"✓ Created {created} Schulen entries")
+
+        # Step 15: Populate Lehrer
+        print("\n[15/17] Populating Lehrer (teachers) catalog...")
+        created, failed = populate_lehrer(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to create")
+        else:
+            print(f"✓ Created {created} Lehrer entries")
+        
+        # Step 16: Patch Lehrer Personaldaten
+        print("\n[16/17] Patching Lehrer Personaldaten...")
+        patched, failed = patch_lehrer_personaldaten(config)
+        if failed > 0:
+            print(f"Warning: {failed} entries failed to patch")
+        else:
+            print(f"✓ Patched {patched} Lehrer Personaldaten entries")
+        
+        # Step 17: Populate Classes and Assign Teachers
+        print("\n[17/17] Populating K_Klassen (classes) and assigning teachers...")
+        created, failed = populate_classes(config)
+        if failed > 0:
+            print(f"Warning: {failed} classes failed to create")
+        else:
+            print(f"✓ Created {created} classes")
+        
+        assigned, failed = assign_class_leaders(config)
+        if failed > 0:
+            print(f"Warning: {failed} class teacher assignments failed")
+        else:
+            print(f"✓ Assigned teachers to {assigned} classes")
         
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")

@@ -1,0 +1,68 @@
+{
+  "description": "Class structure templates for different school forms. Classes are dynamically generated based on anzahlschueler / 25. Class suffixes cycle through a-z, then aa-az, ba-bz, etc.",
+  "classNamingPattern": "Uses lowercase letters: a-z (26), then aa-az (26), ba-bz (26), ca-cz (26), etc. Supports up to 676 classes per grade level.",
+  "groups": [
+    {
+      "name": "Grundschule und Förderschulen (Primarstufe)",
+      "schulformen": ["G", "SG", "FW"],
+      "jahrgaenge": [
+        {"kuerzel": "01", "beschreibung": "Jahrgang 01"},
+        {"kuerzel": "02", "beschreibung": "Jahrgang 02"},
+        {"kuerzel": "03", "beschreibung": "Jahrgang 03"},
+        {"kuerzel": "04", "beschreibung": "Jahrgang 04"}
+      ]
+    },
+    {
+      "name": "Gymnasium, Gesamtschule, Hibernia (Sekundarstufe I+II)",
+      "schulformen": ["GY", "GE", "HI"],
+      "jahrgaenge": [
+        {"kuerzel": "05", "beschreibung": "Jahrgang 05"},
+        {"kuerzel": "06", "beschreibung": "Jahrgang 06"},
+        {"kuerzel": "07", "beschreibung": "Jahrgang 07"},
+        {"kuerzel": "08", "beschreibung": "Jahrgang 08"},
+        {"kuerzel": "09", "beschreibung": "Jahrgang 09"},
+        {"kuerzel": "10", "beschreibung": "Jahrgang 10"},
+        {"kuerzel": "EF", "beschreibung": "Einführungsphase"},
+        {"kuerzel": "Q1", "beschreibung": "Qualifikationsphase 1"},
+        {"kuerzel": "Q2", "beschreibung": "Qualifikationsphase 2"}
+      ]
+    },
+    {
+      "name": "Haupt-, Real-, Sekundar-, Förderschulen (Sekundarstufe I)",
+      "schulformen": ["H", "SK", "R", "SR", "S", "WF"],
+      "jahrgaenge": [
+        {"kuerzel": "05", "beschreibung": "Jahrgang 05"},
+        {"kuerzel": "06", "beschreibung": "Jahrgang 06"},
+        {"kuerzel": "07", "beschreibung": "Jahrgang 07"},
+        {"kuerzel": "08", "beschreibung": "Jahrgang 08"},
+        {"kuerzel": "09", "beschreibung": "Jahrgang 09"},
+        {"kuerzel": "10", "beschreibung": "Jahrgang 10"}
+      ]
+    },
+    {
+      "name": "PRIMUS, Klinikschule, Volksschule",
+      "schulformen": ["PS", "KS", "V"],
+      "jahrgaenge": [
+        {"kuerzel": "01", "beschreibung": "Jahrgang 01"},
+        {"kuerzel": "02", "beschreibung": "Jahrgang 02"},
+        {"kuerzel": "03", "beschreibung": "Jahrgang 03"},
+        {"kuerzel": "04", "beschreibung": "Jahrgang 04"},
+        {"kuerzel": "05", "beschreibung": "Jahrgang 05"},
+        {"kuerzel": "06", "beschreibung": "Jahrgang 06"},
+        {"kuerzel": "07", "beschreibung": "Jahrgang 07"},
+        {"kuerzel": "08", "beschreibung": "Jahrgang 08"},
+        {"kuerzel": "09", "beschreibung": "Jahrgang 09"},
+        {"kuerzel": "10", "beschreibung": "Jahrgang 10"}
+      ]
+    },
+    {
+      "name": "Berufskolleg und Förderschule Berufskolleg",
+      "schulformen": ["BK", "SB"],
+      "jahrgaenge": [
+        {"kuerzel": "01", "beschreibung": "Jahrgang 01", "prefix": "Fachklasse "},
+        {"kuerzel": "02", "beschreibung": "Jahrgang 02", "prefix": "Fachklasse "},
+        {"kuerzel": "03", "beschreibung": "Jahrgang 03", "prefix": "Fachklasse "}
+      ]
+    }
+  ]
+}
