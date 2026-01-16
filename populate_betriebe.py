@@ -123,6 +123,16 @@ def populate_betriebe(config, count=150):
     username = config['database']['username']
     password = config['database']['password']
 
+    # If the config contains an 'anzahlbetriebe' value, use it (overrides
+    # the `count` argument). Accept strings or ints; on failure keep `count`.
+    try:
+        cfg_count = config.get('database', {}).get('anzahlbetriebe')
+        if cfg_count is not None:
+            count = int(cfg_count)
+    except Exception:
+        # leave provided/default count unchanged on any error
+        pass
+
     url_betriebe = f"https://{server}:{port}/db/{schema}/schule/betriebe/create"
     url_ap = f"https://{server}:{port}/db/{schema}/schule/betriebe-ansprechpartner/create"
 
