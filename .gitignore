@@ -2,6 +2,7 @@
 config.json
 .lehrer_cache.json
 .klassen_cache.json
+schulen.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
