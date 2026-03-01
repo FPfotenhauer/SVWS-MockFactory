@@ -26,7 +26,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Schulstammdaten patchen**: Aktualisiert Schulinformationen nach der Initialisierung mit Test-Werten
 - ✓ **Lehrkräfte generieren**: Realistische Lehrkräftedaten mit Geschlecht, Titel, Amtsbezeichnung, Adressen und Kontaktdaten
 - ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
-- 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
+- ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
 
 ## Installation
 
@@ -122,7 +122,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (17 Schritte):
+**Workflow** (18 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -140,6 +140,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 15. Lehrkräfte befüllen (konfigurierbare Anzahl, standardmäßig 100)
 16. Lehrkräfte Personaldaten patchen
 17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl und Schulform)
+18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
 
 ### Schulstammdaten patchen
 
@@ -625,12 +626,11 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (17 Schritte)
+- Complete Setup Workflow mit allen Katalogen (18 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
 - Weitere Kataloge (Adressarten, Berufsfelder, etc.)
-- Schülerdaten mit realistischen Daten generieren
 - Klassen und Kurse erweitern (Schülerzuweisungen)
 - Stundenplan-Generierung
 - BK/SB Fachklassen-Unterstützung (erfordert Fachklassen-Konfiguration)
