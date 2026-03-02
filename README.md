@@ -30,6 +30,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
 - ✓ **Schüler-Misc-Daten anlegen**: Legt pro Schüler drei zufällige Vermerke an und setzt Einwilligungen/Lernplattformen auf aktiv
 - ✓ **Schüler-Erzieherdaten anlegen**: Legt pro Schüler zwei Erzieher-Personen an (1. Person weiblich, 2. Person männlich)
+- ✓ **Schüler-Betrieb zuordnen**: Ordnet jedem Schüler einen zufälligen Betrieb zu
 
 ## Installation
 
@@ -125,7 +126,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (22 Schritte):
+**Workflow** (23 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -148,6 +149,7 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 20. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
 21. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
 22. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
+23. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
 
 Einzeln ausführbar:
 
@@ -177,6 +179,16 @@ python mockfactory.py --patch-schuler-parents
 API-Endpunkte dafür:
 - `POST /db/{schema}/schueler/erzieher/new/{idSchueler}/1` (1. Person anlegen)
 - `PATCH /db/{schema}/erzieher/{idErzieher}/stammdaten/2` (2. Person ergänzen)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-company
+```
+
+API-Endpunkte dafür:
+- `GET /db/{schema}/betriebe` (Liste verfügbarer Betriebe)
+- `POST /db/{schema}/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}`
 
 ### Schulstammdaten patchen
 
@@ -665,7 +677,8 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
 - Schüler-Telefonnummern (2 Einträge pro Schüler)
 - Schüler-Misc-Daten (3 Vermerke + Einwilligungen + Lernplattformen)
 - Schüler-Erzieherdaten (2 Personen pro Schüler)
-- Complete Setup Workflow mit allen Katalogen (22 Schritte)
+- Schüler-Betrieb-Zuordnung (1 zufälliger Betrieb pro Schüler)
+- Complete Setup Workflow mit allen Katalogen (23 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
