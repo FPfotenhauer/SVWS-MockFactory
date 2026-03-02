@@ -7,9 +7,13 @@ and creates one note per student via POST /db/{schema}/schueler/vermerke.
 """
 
 import json
+import os
 import random
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -18,6 +22,14 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 RAND = random.Random()
+LP_EINWILLIGUNG_KEYS = (
+    'einwilligungAbgefragt',
+    'einwilligungNutzung',
+    'einwilligungAudiokonferenz',
+    'einwilligungVideokonferenz',
+)
+_THREAD_LOCAL = threading.local()
+
 BEMERKUNGEN = [
     'Eltern haben nicht zugestimmt',
     'Rückmeldung der Erziehungsberechtigten steht aus',
@@ -26,6 +38,43 @@ BEMERKUNGEN = [
     'Teilnahme an AG dokumentiert',
     'Hinweis im Beratungsgespräch aufgenommen',
 ]
+
+
+def get_session(auth: HTTPBasicAuth) -> requests.Session:
+    session = getattr(_THREAD_LOCAL, 'session', None)
+    if session is None:
+        session = requests.Session()
+        session.auth = auth
+        session.verify = False
+        _THREAD_LOCAL.session = session
+    return session
+
+
+def request_with_retry(
+    session: requests.Session,
+    method: str,
+    url: str,
+    payload: Optional[dict] = None,
+    success_codes: Tuple[int, ...] = (200, 201, 204),
+    retries: int = 3,
+) -> Optional[requests.Response]:
+    for attempt in range(1, retries + 1):
+        try:
+            resp = session.request(method=method, url=url, json=payload, timeout=20)
+        except requests.exceptions.RequestException:
+            resp = None
+
+        if resp is not None and resp.status_code in success_codes:
+            return resp
+
+        should_retry = resp is None or (resp.status_code >= 500)
+        if attempt < retries and should_retry:
+            time.sleep(0.15 * attempt)
+            continue
+
+        return resp
+
+    return None
 
 
 def load_cache() -> List[dict]:
@@ -52,12 +101,9 @@ def fetch_vermerkarten_ids(config) -> List[int]:
     db = config['database']
     url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/vermerkarten"
 
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+    auth = HTTPBasicAuth(db['username'], db['password'])
+    session = get_session(auth)
+    resp = session.get(url, timeout=20)
     resp.raise_for_status()
 
     data = resp.json()
@@ -86,6 +132,64 @@ def build_vermerk_payload(schueler_id: int, vermerkarten_ids: List[int]) -> dict
     }
 
 
+def fetch_student_einwilligungen(config, auth: HTTPBasicAuth, schueler_id: int) -> List[dict]:
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/einwilligungen"
+    session = get_session(auth)
+    resp = session.get(url, timeout=20)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def patch_student_einwilligung(config, auth: HTTPBasicAuth, schueler_id: int, id_einwilligungsart: int) -> bool:
+    db = config['database']
+    url = (
+        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+        f"/schueler/{schueler_id}/einwilligungen/{id_einwilligungsart}"
+    )
+    payload = {
+        'abgefragt': True,
+        'status': True,
+    }
+    session = get_session(auth)
+    resp = request_with_retry(session, 'PATCH', url, payload=payload, success_codes=(200, 204))
+    return resp is not None and resp.status_code in (200, 204)
+
+
+def fetch_student_lernplattformen(config, auth: HTTPBasicAuth, schueler_id: int) -> List[dict]:
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/lernplattformen"
+    session = get_session(auth)
+    resp = session.get(url, timeout=20)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def patch_student_lernplattform(config, auth: HTTPBasicAuth, schueler_id: int, id_lernplattform: int) -> bool:
+    db = config['database']
+    url = (
+        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+        f"/schueler/{schueler_id}/lernplattformen/{id_lernplattform}"
+    )
+    payload = {
+        'einwilligungAbgefragt': True,
+        'einwilligungNutzung': True,
+        'einwilligungAudiokonferenz': True,
+        'einwilligungVideokonferenz': True,
+    }
+    session = get_session(auth)
+    resp = request_with_retry(session, 'PATCH', url, payload=payload, success_codes=(200, 204))
+    return resp is not None and resp.status_code in (200, 204)
+
+
+def needs_einwilligung_update(einwilligung: dict) -> bool:
+    return not (bool(einwilligung.get('abgefragt')) and bool(einwilligung.get('status')))
+
+
+def needs_lernplattform_update(lernplattform: dict) -> bool:
+    return not all(bool(lernplattform.get(key)) for key in LP_EINWILLIGUNG_KEYS)
+
+
 def patch_schueler_misc(config):
     print('\nLade Schüler aus Cache...')
     schueler_list = load_cache()
@@ -112,53 +216,122 @@ def patch_schueler_misc(config):
     db = config['database']
     url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/vermerke"
     auth = HTTPBasicAuth(db['username'], db['password'])
+    workers_raw = db.get('misc_workers', os.getenv('SVWS_MISC_WORKERS', '3'))
+    try:
+        workers = max(1, min(16, int(workers_raw)))
+    except Exception:
+        workers = 6
 
     print(f"\nErzeuge Vermerke für {total} Schüler...")
+    print(f"Parallelität: {workers} Worker")
     print(f"URL: {url}\n")
 
     created = 0
     failed = 0
+    einwilligungen_updated = 0
+    lernplattformen_updated = 0
     entries_per_student = 3
 
-    for idx, schueler in enumerate(schueler_list, start=1):
+    def process_student(args: Tuple[int, dict]) -> Tuple[int, int, int, int, str]:
+        idx, schueler = args
         schueler_id = extract_id(schueler)
         vorname = schueler.get('vorname', '')
         nachname = schueler.get('nachname', '')
 
-        if schueler_id is None:
-            failed += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache")
-            continue
-
+        local_created = 0
+        local_failed = 0
+        student_einwilligungen_ok = 0
+        student_lernplattformen_ok = 0
         student_failed = 0
+
+        if schueler_id is None:
+            return 0, 1, 0, 0, f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache"
+
+        session = get_session(auth)
+
         for _ in range(entries_per_student):
             payload = build_vermerk_payload(schueler_id, vermerkarten_ids)
 
-            try:
-                resp = requests.post(
-                    url,
-                    json=payload,
-                    auth=auth,
-                    verify=False,
-                    timeout=20,
-                )
-
-                if resp.status_code in (200, 201):
-                    created += 1
-                else:
-                    failed += 1
-                    student_failed += 1
-
-            except requests.exceptions.RequestException:
-                failed += 1
+            resp = request_with_retry(session, 'POST', url, payload=payload, success_codes=(200, 201))
+            if resp is not None and resp.status_code in (200, 201):
+                local_created += 1
+            else:
+                local_failed += 1
                 student_failed += 1
 
+        student_einwilligungen_ok = 0
+        student_lernplattformen_ok = 0
+
+        try:
+            einwilligungen = fetch_student_einwilligungen(config, auth, schueler_id)
+            for einwilligung in einwilligungen:
+                id_einwilligungsart = extract_id({'id': einwilligung.get('idEinwilligungsart')})
+                if id_einwilligungsart is None:
+                    continue
+                if not needs_einwilligung_update(einwilligung):
+                    continue
+                try:
+                    if patch_student_einwilligung(config, auth, schueler_id, id_einwilligungsart):
+                        student_einwilligungen_ok += 1
+                    else:
+                        local_failed += 1
+                        student_failed += 1
+                except requests.exceptions.RequestException:
+                    local_failed += 1
+                    student_failed += 1
+        except requests.exceptions.RequestException:
+            local_failed += 1
+            student_failed += 1
+
+        try:
+            lernplattformen = fetch_student_lernplattformen(config, auth, schueler_id)
+            for lernplattform in lernplattformen:
+                id_lernplattform = extract_id({'id': lernplattform.get('idLernplattform')})
+                if id_lernplattform is None:
+                    continue
+                if not needs_lernplattform_update(lernplattform):
+                    continue
+                try:
+                    if patch_student_lernplattform(config, auth, schueler_id, id_lernplattform):
+                        student_lernplattformen_ok += 1
+                    else:
+                        local_failed += 1
+                        student_failed += 1
+                except requests.exceptions.RequestException:
+                    local_failed += 1
+                    student_failed += 1
+        except requests.exceptions.RequestException:
+            local_failed += 1
+            student_failed += 1
+
         if student_failed == 0:
-            print(f"[{idx}/{total}] {vorname} {nachname}: ✓ ({entries_per_student} Vermerke)")
+            line = (
+                f"[{idx}/{total}] {vorname} {nachname}: ✓ "
+                f"({entries_per_student} Vermerke, {student_einwilligungen_ok} Einwilligungen, "
+                f"{student_lernplattformen_ok} Lernplattformen)"
+            )
         else:
-            print(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  {entries_per_student - student_failed}/{entries_per_student} Vermerke")
+            line = (
+                f"[{idx}/{total}] {vorname} {nachname}: ⚠️ "
+                f"({entries_per_student} Vermerke, {student_einwilligungen_ok} Einwilligungen, "
+                f"{student_lernplattformen_ok} Lernplattformen; Fehler: {student_failed})"
+            )
+
+        return local_created, local_failed, student_einwilligungen_ok, student_lernplattformen_ok, line
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for local_created, local_failed, local_einwilligungen, local_lernplattformen, line in executor.map(
+            process_student,
+            enumerate(schueler_list, start=1),
+        ):
+            created += local_created
+            failed += local_failed
+            einwilligungen_updated += local_einwilligungen
+            lernplattformen_updated += local_lernplattformen
+            print(line)
 
     print(f"\nErgebnis: {created} Vermerke erfolgreich, {failed} fehlgeschlagen")
+    print(f"Zusätzlich gesetzt: {einwilligungen_updated} Einwilligungen, {lernplattformen_updated} Lernplattformen")
     if failed == 0:
         print('✓ Alle Schüler-Vermerke erfolgreich angelegt!')
     else:
