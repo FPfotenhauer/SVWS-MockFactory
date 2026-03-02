@@ -28,7 +28,8 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
 - ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
 - ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
-- ✓ **Schüler-Vermerke anlegen**: Legt pro Schüler drei zufällige Vermerke an
+- ✓ **Schüler-Misc-Daten anlegen**: Legt pro Schüler drei zufällige Vermerke an und setzt Einwilligungen/Lernplattformen auf aktiv
+- ✓ **Schüler-Erzieherdaten anlegen**: Legt pro Schüler zwei Erzieher-Personen an (1. Person weiblich, 2. Person männlich)
 
 ## Installation
 
@@ -124,7 +125,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (21 Schritte):
+**Workflow** (22 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -145,7 +146,8 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
 19. Schüler-Stammdaten patchen
 20. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
-21. Schüler-Vermerke anlegen (3 Einträge pro Schüler)
+21. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
+22. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
 
 Einzeln ausführbar:
 
@@ -160,6 +162,21 @@ Einzeln ausführbar:
 ```bash
 python mockfactory.py --patch-schueler-misc
 ```
+
+API-Endpunkte dafür:
+- `POST /db/{schema}/schueler/vermerke` (3 Einträge pro Schüler)
+- `PATCH /db/{schema}/schueler/{id}/einwilligungen/{idEinwilligungsart}`
+- `PATCH /db/{schema}/schueler/{id}/lernplattformen/{idLernplattform}`
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schuler-parents
+```
+
+API-Endpunkte dafür:
+- `POST /db/{schema}/schueler/erzieher/new/{idSchueler}/1` (1. Person anlegen)
+- `PATCH /db/{schema}/erzieher/{idErzieher}/stammdaten/2` (2. Person ergänzen)
 
 ### Schulstammdaten patchen
 
@@ -645,7 +662,10 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (20 Schritte)
+- Schüler-Telefonnummern (2 Einträge pro Schüler)
+- Schüler-Misc-Daten (3 Vermerke + Einwilligungen + Lernplattformen)
+- Schüler-Erzieherdaten (2 Personen pro Schüler)
+- Complete Setup Workflow mit allen Katalogen (22 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
