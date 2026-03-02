@@ -27,6 +27,8 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Lehrkräfte generieren**: Realistische Lehrkräftedaten mit Geschlecht, Titel, Amtsbezeichnung, Adressen und Kontaktdaten
 - ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
 - ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
+- ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
+- ✓ **Schüler-Vermerke anlegen**: Legt pro Schüler drei zufällige Vermerke an
 
 ## Installation
 
@@ -122,7 +124,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (18 Schritte):
+**Workflow** (21 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -141,6 +143,23 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 16. Lehrkräfte Personaldaten patchen
 17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl und Schulform)
 18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
+19. Schüler-Stammdaten patchen
+20. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
+21. Schüler-Vermerke anlegen (3 Einträge pro Schüler)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schuler-telefon
+```
+
+API-Endpunkt dafür: `POST /db/{schema}/schueler/{id}/telefon` (zweimal pro Schüler, je Telefonnummer ein Request).
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-misc
+```
 
 ### Schulstammdaten patchen
 
@@ -626,7 +645,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (18 Schritte)
+- Complete Setup Workflow mit allen Katalogen (20 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
