@@ -531,6 +531,15 @@ def build_payload_entry(
     else:
         city_streets = []
 
+    # Secondary source: PLZ-only mapping from local streets.csv
+    # (preferred over external OpenPLZ lookup)
+    if not city_streets and wohnort_postal:
+        postal_only_streets = streets_by_postal.get(wohnort_postal)
+        if postal_only_streets:
+            city_streets = postal_only_streets
+            street_source_stats['csv_postal_only'] = street_source_stats.get('csv_postal_only', 0) + 1
+
+    # External fallback: OpenPLZ only when local CSV mappings have no match
     openplz_mode = 'not_used'
     if use_openplz_streets and wohnort_name and wohnort_postal and not city_streets:
         city_streets, openplz_mode = fetch_openplz_streets(
@@ -577,9 +586,6 @@ def build_payload_entry(
         selected_street = RAND.choice(city_streets)
         if openplz_mode != 'not_used':
             street_source_stats['openplz'] = street_source_stats.get('openplz', 0) + 1
-    elif wohnort_postal and streets_by_postal.get(wohnort_postal):
-        selected_street = RAND.choice(streets_by_postal[wohnort_postal])
-        street_source_stats['csv_postal_only'] = street_source_stats.get('csv_postal_only', 0) + 1
     elif wohnort_postal and not city_streets:
         # Last fallback: city-based street list to avoid "Unbekannt"
         city_key = wohnort_name.casefold()
