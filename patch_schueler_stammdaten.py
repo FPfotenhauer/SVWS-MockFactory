@@ -7,7 +7,7 @@ and sends PATCH batches to /db/{schema}/schueler/stammdaten.
 Distribution rules:
 - Wohnort: 80% school city, 20% other cities from /orte
 - Staatsangehoerigkeit: 80% DEU, 20% other from nationalitaeten catalog
-- Status: 95% status=2, 5% status=1
+- Status: 95% status=2, 5% status=0
 """
 
 import csv
@@ -468,7 +468,7 @@ def pick_staatsangehoerigkeit(deu_code: Optional[str], other_codes: List[str]) -
 
 
 def pick_status() -> int:
-    return 2 if RAND.random() < 0.95 else 1
+    return 2 if RAND.random() < 0.95 else 0
 
 
 def is_full_age(geburtsdatum: Optional[str]) -> bool:
@@ -788,7 +788,7 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     print(f"OpenPLZ Request-Limit: {openplz_budget_state['limit']}")
     if sampled_ort_ids is not all_ort_ids:
         print(f"Orts-Pool für Zufallsauswahl begrenzt: {len(sampled_ort_ids)} von {len(all_ort_ids)}")
-    print('Verteilung: 80% Schulort / 20% andere Orte, 80% DEU, 95% Status=2')
+    print('Verteilung: 80% Schulort / 20% andere Orte, 80% DEU, 95% Status=2, 5% Status=0')
 
     payload_all = []
     total = len(schueler_list)
