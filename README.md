@@ -28,6 +28,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
 - ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
 - ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
+- ✓ **Schüler-Schulbesuch patchen**: Setzt für Zieljahrgänge eine Grundschule aus dem Schulenkatalog
 - ✓ **Schüler-Misc-Daten anlegen**: Legt pro Schüler drei zufällige Vermerke an und setzt Einwilligungen/Lernplattformen auf aktiv
 - ✓ **Schüler-Erzieherdaten anlegen**: Legt pro Schüler zwei Erzieher-Personen an (1. Person weiblich, 2. Person männlich)
 - ✓ **Schüler-Betrieb zuordnen**: Ordnet jedem Schüler einen zufälligen Betrieb zu
@@ -126,7 +127,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (23 Schritte):
+**Workflow** (24 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -146,10 +147,24 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl und Schulform)
 18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
 19. Schüler-Stammdaten patchen
-20. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
-21. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
-22. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
-23. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
+20. Schüler-Schulbesuch patchen (Jahrgänge 05-10, EF, Q1, Q2)
+21. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
+22. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
+23. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
+24. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-schulbesuch
+```
+
+API-Endpunkte dafür:
+- `GET /db/{schema}/schule/schulen` (Katalog der Schulen, Filter auf Grundschulen)
+- `GET /db/{schema}/schueler/{id}/schulbesuch`
+- `PATCH /db/{schema}/schueler/{id}/schulbesuch`
+
+Zieljahrgänge: `05`, `06`, `07`, `08`, `09`, `10`, `EF`, `Q1`, `Q2`
 
 Einzeln ausführbar:
 
