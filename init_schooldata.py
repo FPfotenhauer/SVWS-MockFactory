@@ -32,6 +32,13 @@ def patch_schulstammdaten(config):
 
     url = f"https://{server}:{port}/db/{schema}/schule/stammdaten"
 
+    adresse_config = config.get('schooldata', {}).get('adresse', {})
+    strassenname = adresse_config.get('strassenname', 'Elisabethstraße')
+    hausnummer = adresse_config.get('hausnummer', '6')
+    hausnummer_zusatz = adresse_config.get('hausnummerZusatz', '')
+    plz = adresse_config.get('plz', '42287')
+    ort = adresse_config.get('ort', 'Wuppertal')
+
     try:
         print("\nPatching Schulstammdaten...")
 
@@ -40,11 +47,11 @@ def patch_schulstammdaten(config):
             "bezeichnung1": "Testschule aus gernerierten Daten",
             "bezeichnung2": "MockFactory Schule",
             "bezeichnung3": "Generierte Daten",
-            "strassenname": "Elisabethstraße",
-            "hausnummer": "6",
-            "hausnummerZusatz": "",
-            "plz": "42287",
-            "ort": "Wuppertal",
+            "strassenname": strassenname,
+            "hausnummer": hausnummer,
+            "hausnummerZusatz": hausnummer_zusatz,
+            "plz": plz,
+            "ort": ort,
             "telefon": "012345-6876876",
             "fax": "012345-766766",
             "email": "mockschule@schule.example.com",
