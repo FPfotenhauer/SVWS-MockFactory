@@ -18,12 +18,20 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Mapping from SchulformKrz to idSchulform (based on SVWS database from Schulform.json)
 SCHULFORM_MAPPING = {
     'BK': 1000,  # Berufskolleg
+    'G': 3000,   # Grundschule (CSV SchulformKrz)
     'GG': 3000,  # Grundschule
     'GE': 4000,  # Gesamtschule
     'GY': 6000,  # Gymnasium
+    'H': 7000,   # Hauptschule (CSV SchulformKrz)
     'GH': 7000,  # Hauptschule (assuming GH = Gymnasium-Hauptschule or similar)
+    'R': 10000,  # Realschule (CSV SchulformKrz)
     'RS': 10000, # Realschule
+    'S': 11000,  # Förderschule im Bereich Grund-/Hauptschule
     'FÖ': 11000, # Förderschule (S)
+    'SB': 13000, # Förderschule im Bereich Berufskolleg
+    'SG': 14000, # Förderschule im Bereich Gymnasium
+    'SR': 16000, # Förderschule im Bereich Realschule
+    'WF': 19000, # Freie Waldorfförderschule
     'SK': 15000, # Sekundarschule
     'V': 17000,  # Volksschule
     'PS': 9000,  # Schulversuch PRIMUS
