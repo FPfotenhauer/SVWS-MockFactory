@@ -29,6 +29,7 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
 - ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
 - ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
 - ✓ **Schüler-Schulbesuch patchen**: Setzt für Zieljahrgänge eine Grundschule aus dem Schulenkatalog
+- ✓ **Schüler-Sprachbelegungen anlegen**: Legt für Zieljahrgänge zwei Sprachbelegungen (E/S) an
 - ✓ **Schüler-Misc-Daten anlegen**: Legt pro Schüler drei zufällige Vermerke an und setzt Einwilligungen/Lernplattformen auf aktiv
 - ✓ **Schüler-Erzieherdaten anlegen**: Legt pro Schüler zwei Erzieher-Personen an (1. Person weiblich, 2. Person männlich)
 - ✓ **Schüler-Betrieb zuordnen**: Ordnet jedem Schüler einen zufälligen Betrieb zu
@@ -127,7 +128,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (24 Schritte):
+**Workflow** (25 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -148,10 +149,11 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
 19. Schüler-Stammdaten patchen
 20. Schüler-Schulbesuch patchen (Jahrgänge 05-10, EF, Q1, Q2)
-21. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
-22. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
-23. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
-24. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
+21. Schüler-Sprachbelegungen anlegen (E/S für Jahrgänge 05-10, EF, Q1, Q2)
+22. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
+23. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
+24. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
+25. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
 
 Einzeln ausführbar:
 
@@ -169,7 +171,16 @@ Zieljahrgänge: `05`, `06`, `07`, `08`, `09`, `10`, `EF`, `Q1`, `Q2`
 Einzeln ausführbar:
 
 ```bash
-python mockfactory.py --patch-schuler-telefon
+python mockfactory.py --patch-schueler-language
+```
+
+API-Endpunkt dafür:
+- `POST /db/{schema}/schueler/{id}/sprachen/belegungen` (2 Einträge pro Schüler in Zieljahrgängen)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-telefon
 ```
 
 API-Endpunkt dafür: `POST /db/{schema}/schueler/{id}/telefon` (zweimal pro Schüler, je Telefonnummer ein Request).
@@ -188,7 +199,7 @@ API-Endpunkte dafür:
 Einzeln ausführbar:
 
 ```bash
-python mockfactory.py --patch-schuler-parents
+python mockfactory.py --patch-schueler-parents
 ```
 
 API-Endpunkte dafür:
@@ -689,11 +700,13 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
+- Schüler-Schulbesuch patchen (Zieljahrgänge 05-10, EF, Q1, Q2)
+- Schüler-Sprachbelegungen (E/S für Zieljahrgänge 05-10, EF, Q1, Q2)
 - Schüler-Telefonnummern (2 Einträge pro Schüler)
 - Schüler-Misc-Daten (3 Vermerke + Einwilligungen + Lernplattformen)
 - Schüler-Erzieherdaten (2 Personen pro Schüler)
 - Schüler-Betrieb-Zuordnung (1 zufälliger Betrieb pro Schüler)
-- Complete Setup Workflow mit allen Katalogen (23 Schritte)
+- Complete Setup Workflow mit allen Katalogen (25 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
