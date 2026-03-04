@@ -12,6 +12,7 @@ Stores created student metadata in .schueler_cache.json for follow-up PATCH step
 import json
 import random
 import re
+from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -489,6 +490,43 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
         print('❌ Keine Klassen gefunden. Bitte zuerst populate_classes.py ausführen.')
         print('   Hinweis: Bei API-Fehlern kann .klassen_cache.json als Fallback genutzt werden.')
         return 0, 1
+
+    # Calculate classes per yeargroup to handle Oberstufe (EF/Q1/Q2) properly
+    classes_per_jahrgang = defaultdict(int)
+    for c in classes:
+        jg_kuerzel = jahrgang_map.get(c['idJahrgang'], '')
+        classes_per_jahrgang[jg_kuerzel] += 1
+    
+    # Identify Oberstufe classes (EF, Q1, Q2) and regular classes
+    oberstufe_jahrgaenge = {'EF', 'Q1', 'Q2'}
+    oberstufe_classes = []
+    regular_classes = []
+    
+    for c in classes:
+        jg_kuerzel = jahrgang_map.get(c['idJahrgang'], '')
+        if jg_kuerzel in oberstufe_jahrgaenge:
+            oberstufe_classes.append(c)
+        else:
+            regular_classes.append(c)
+    
+    # Expand Oberstufe classes to match the number of parallel classes in regular grades
+    # This ensures EF/Q1/Q2 get as many students as all parallel classes of e.g. grade 09 combined
+    if regular_classes and oberstufe_classes:
+        regular_jahrgaenge = [jg for jg in classes_per_jahrgang.keys() if jg not in oberstufe_jahrgaenge]
+        if regular_jahrgaenge:
+            avg_classes_per_jahrgang = sum(classes_per_jahrgang[jg] for jg in regular_jahrgaenge) / len(regular_jahrgaenge)
+            multiplier = max(1, int(round(avg_classes_per_jahrgang)))
+            
+            # Duplicate each Oberstufe class 'multiplier' times
+            expanded_oberstufe = []
+            for c in oberstufe_classes:
+                for _ in range(multiplier):
+                    expanded_oberstufe.append(c)
+            
+            # Rebuild classes list with expanded Oberstufe
+            classes = regular_classes + expanded_oberstufe
+            
+            print(f"ℹ️  Oberstufe-Klassen (EF/Q1/Q2) je {multiplier}x dupliziert für größere Jahrgänge\n")
 
     today = date.today()
     aufnahme_ref_date = current_schoolyear_start(today)
