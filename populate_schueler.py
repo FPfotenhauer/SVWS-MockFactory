@@ -533,7 +533,54 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
     divers_code = db.get('schuelerDiversGeschlechtCode', 5)
     if not isinstance(divers_code, int):
         divers_code = 5
-    genders = build_gender_mix(total, divers_code=divers_code)
+    extra_students_target = max(0, int(total * 0.10))
+    extra_batches: List[dict] = []
+    extra_class_sequence: List[dict] = []
+
+    primarstufe_schulformen = {'G', 'SG', 'FW', 'PS', 'V'}
+    extra_target_jahrgaenge: List[str] = []
+    if extra_students_target > 0:
+        if schulform in primarstufe_schulformen:
+            extra_target_jahrgaenge = ['01']
+        elif schulform in {'GY', 'GE'}:
+            extra_target_jahrgaenge = ['05', 'EF']
+        elif schulform not in {'BK', 'SB'}:
+            extra_target_jahrgaenge = ['05']
+        else:
+            print(
+                f"ℹ️  Schulform {schulform}: Keine zusätzliche 10%-Aufnahme-Logik konfiguriert "
+                "(nur Primarstufe/Sek I + EF bei GY/GE)."
+            )
+
+        for target_jahrgang in extra_target_jahrgaenge:
+            target_pool = [
+                c for c in classes
+                if (jahrgang_map.get(c.get('idJahrgang'), '') or '').upper() == target_jahrgang
+            ]
+            if not target_pool:
+                print(
+                    f"⚠️  Keine Klassen für Jahrgang {target_jahrgang} gefunden. "
+                    "Zusatz-10%-Aufnahmeschüler für diesen Jahrgang werden übersprungen."
+                )
+                continue
+
+            extra_batches.append(
+                {
+                    'jahrgang': target_jahrgang,
+                    'count': extra_students_target,
+                    'pool': target_pool,
+                }
+            )
+
+        for batch in extra_batches:
+            pool = batch['pool']
+            count = batch['count']
+            for seq_idx in range(count):
+                extra_class_sequence.append(pool[seq_idx % len(pool)])
+
+    total_extra_students = len(extra_class_sequence)
+    total_with_extra = total + total_extra_students
+    genders = build_gender_mix(total_with_extra, divers_code=divers_code)
 
     # BK yeargroup ordering for 16-19 start-age logic
     bk_jahrgaenge_sorted = sorted(
@@ -550,6 +597,12 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
     print(f"Schulform: {schulform}")
     print(f"idSchuljahresabschnitt: {id_schuljahresabschnitt}")
     print(f"Klassen für Aufnahme: {len(classes)}")
+    if extra_batches:
+        for batch in extra_batches:
+            print(
+                f"Zusatz-Aufnahmen: {batch['count']} (10%) in Jahrgang {batch['jahrgang']}, "
+                "Status 0"
+            )
     print(
         "Religionen-Buckets: "
         f"ev={len(religion_buckets['evangelisch'])}, "
@@ -564,10 +617,19 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
     cache_data = []
     warned_divers_fallback = False
 
-    for idx in range(1, total + 1):
+    for idx in range(1, total_with_extra + 1):
         requested_geschlecht = genders[idx - 1]
         gesendetes_geschlecht = requested_geschlecht
-        klasse = classes[(idx - 1) % len(classes)]
+        is_extra_student = idx > total
+        status_override = None
+
+        if is_extra_student and extra_class_sequence:
+            extra_index = idx - total - 1
+            klasse = extra_class_sequence[extra_index]
+            status_override = 0
+        else:
+            klasse = classes[(idx - 1) % len(classes)]
+
         id_klasse = klasse['id']
         id_jahrgang = klasse['idJahrgang']
         jahrgang_kuerzel = jahrgang_map.get(id_jahrgang, '')
@@ -652,7 +714,7 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
             if resp.status_code in (200, 201):
                 created += 1
                 print(
-                    f"[{idx}/{total}] {vorname} {nachname} / Klasse {klasse['kuerzel']}: "
+                    f"[{idx}/{total_with_extra}] {vorname} {nachname} / Klasse {klasse['kuerzel']}: "
                     f"✓ (HTTP {resp.status_code})"
                 )
 
@@ -677,6 +739,7 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
                                 'idKlasse': id_klasse,
                                 'jahrgangKuerzel': jahrgang_kuerzel,
                                 'klassenKuerzel': klasse['kuerzel'],
+                                'statusOverride': status_override,
                             }
                         )
                 except Exception:
@@ -687,11 +750,11 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
                 except Exception:
                     err = resp.text
                 failed += 1
-                print(f"[{idx}/{total}] {vorname} {nachname}: ❌ HTTP {resp.status_code} - {err[:180]}")
+                print(f"[{idx}/{total_with_extra}] {vorname} {nachname}: ❌ HTTP {resp.status_code} - {err[:180]}")
 
         except requests.exceptions.RequestException as exc:  # pragma: no cover
             failed += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ❌ Fehler: {exc}")
+            print(f"[{idx}/{total_with_extra}] {vorname} {nachname}: ❌ Fehler: {exc}")
 
     if cache_data:
         with open(cache_file, 'w', encoding='utf-8') as f:

@@ -634,7 +634,11 @@ def build_payload_entry(
     geburtsland_vater = pick_staatsangehoerigkeit(deu_code, other_nat_codes) or geburtsland
     geburtsland_mutter = pick_staatsangehoerigkeit(deu_code, other_nat_codes) or geburtsland
 
-    status = pick_status()
+    status_override = schueler.get('statusOverride')
+    if isinstance(status_override, int):
+        status = status_override
+    else:
+        status = pick_status()
     haltestelle_id = RAND.choice(haltestellen_ids) if haltestellen_ids else None
     fahrschuelerart_id = RAND.choice(fahrschuelerarten_ids) if fahrschuelerarten_ids else None
 
