@@ -19,14 +19,20 @@ Dieses Python-Programm erstellt realistische Testdatenbanken für den SVWS-Serve
   - Haltestellen (10 Einträge aus katalogdaten/haltestellen.txt mit Zufallsdistanzen)
   - Lernplattformen (Einträge aus katalogdaten/lernplattformen.txt)
   - Vermerkarten (7 Einträge aus katalogdaten/vermerkarten.txt)
-  - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
+  - Betriebe (konfigurierbare Anzahl synthetischer Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
   - Lehrkräfte (konfigurierbare Anzahl, standardmäßig 100 aus config.json)
   - Klassen (dynamisch basierend auf Schülerzahl und Schulform)
 - ✓ **Schulstammdaten patchen**: Aktualisiert Schulinformationen nach der Initialisierung mit Test-Werten
 - ✓ **Lehrkräfte generieren**: Realistische Lehrkräftedaten mit Geschlecht, Titel, Amtsbezeichnung, Adressen und Kontaktdaten
 - ✓ **Klassen erstellen**: Dynamische Klassengenerierung basierend auf Schülerzahl (~25 Schüler/Klasse) mit schulformspezifischen Jahrgängen und automatischer Klassenleiterzuweisung
-- 🚧 **Schülerdaten generieren**: Realistische Schülerdaten erstellen (in Entwicklung)
+- ✓ **Schülerdaten generieren**: Realistische Schülerdaten erstellen (schulform-/jahrgangsbasiert)
+- ✓ **Schüler-Telefonnummern anlegen**: Legt pro Schüler zwei Telefonnummern über Telefonarten an
+- ✓ **Schüler-Schulbesuch patchen**: Setzt für Zieljahrgänge eine Grundschule aus dem Schulenkatalog
+- ✓ **Schüler-Sprachbelegungen anlegen**: Legt für Zieljahrgänge zwei Sprachbelegungen (E/S) an
+- ✓ **Schüler-Misc-Daten anlegen**: Legt pro Schüler drei zufällige Vermerke an und setzt Einwilligungen/Lernplattformen auf aktiv
+- ✓ **Schüler-Erzieherdaten anlegen**: Legt pro Schüler zwei Erzieher-Personen an (1. Person weiblich, 2. Person männlich)
+- ✓ **Schüler-Betrieb zuordnen**: Ordnet jedem Schüler einen zufälligen Betrieb zu
 
 ## Installation
 
@@ -74,7 +80,9 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
     "password": "your-admin-password",
     "schulnummer": 123456,
     "anzahllehrer": 100,
-    "anzahlschueler": 1200
+    "anzahlschueler": 1200,
+    "anzahlbetriebe": 150,
+    "test": false
   }
 }
 ```
@@ -88,8 +96,10 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 - **dbusername/dbpassword**: Zugangsdaten für Datenbankoperationen (Server-Status)
 - **username/password**: Zugangsdaten für API-Operationen (Schema-Initialisierung)
 - **schulnummer**: Schulnummer für die Initialisierung
-- **anzahllehrer**: Anzahl zu generierender Lehrkräfte
-- **anzahlschueler**: Anzahl zu generierender Schüler
+- **anzahllehrer**: Anzahl zu generierender Lehrkräfte (Standard: 100)
+- **anzahlschueler**: Anzahl zu generierender Schüler (für Klassenberechnung)
+- **anzahlbetriebe**: Anzahl zu generierender Betriebe (Standard: 150)
+- **test**: Flag für Testmodus bei Schulen-Befüllung (false: Schulen.csv, true: SchulenTest.csv)
 
 ## Sicherheit
 
@@ -118,7 +128,7 @@ python mockfactory.py --full-setup
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
 
-**Workflow** (17 Schritte):
+**Workflow** (25 Schritte):
 1. Server-Erreichbarkeit prüfen
 2. Datenbank-Schema erstellen
 3. Datenbank initialisieren + Schulstammdaten mit Testwerten patchen
@@ -130,12 +140,81 @@ Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen un
 9. Haltestellen befüllen (10 Einträge)
 10. Lernplattformen befüllen (aus Textdatei)
 11. Vermerkarten befüllen (7 Einträge aus Textdatei)
-12. Betriebe befüllen (150 synthetische Einträge mit je 2 Ansprechpartnern)
+12. Betriebe befüllen (konfigurierbare Anzahl synthetischer Einträge mit je 2 Ansprechpartnern)
 13. Kindergarten befüllen (20 Einträge, nur bei Schulformen G, PS, S, V, WF)
 14. Schulen befüllen (190 NRW Schulen)
 15. Lehrkräfte befüllen (konfigurierbare Anzahl, standardmäßig 100)
 16. Lehrkräfte Personaldaten patchen
 17. Klassen erstellen und Klassenleitungen zuweisen (dynamisch basierend auf Schülerzahl und Schulform)
+18. Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung)
+19. Schüler-Stammdaten patchen
+20. Schüler-Schulbesuch patchen (Jahrgänge 05-10, EF, Q1, Q2)
+21. Schüler-Sprachbelegungen anlegen (E/S für Jahrgänge 05-10, EF, Q1, Q2)
+22. Schüler-Telefonnummern anlegen (2 Einträge pro Schüler)
+23. Schüler-Misc-Daten anlegen (3 Vermerke + Einwilligungen + Lernplattformen)
+24. Schüler-Erzieherdaten anlegen (2 Personen pro Schüler)
+25. Schüler-Betrieb zuordnen (1 zufälliger Betrieb pro Schüler)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-schulbesuch
+```
+
+API-Endpunkte dafür:
+- `GET /db/{schema}/schule/schulen` (Katalog der Schulen, Filter auf Grundschulen)
+- `GET /db/{schema}/schueler/{id}/schulbesuch`
+- `PATCH /db/{schema}/schueler/{id}/schulbesuch`
+
+Zieljahrgänge: `05`, `06`, `07`, `08`, `09`, `10`, `EF`, `Q1`, `Q2`
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-language
+```
+
+API-Endpunkt dafür:
+- `POST /db/{schema}/schueler/{id}/sprachen/belegungen` (2 Einträge pro Schüler in Zieljahrgängen)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-telefon
+```
+
+API-Endpunkt dafür: `POST /db/{schema}/schueler/{id}/telefon` (zweimal pro Schüler, je Telefonnummer ein Request).
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-misc
+```
+
+API-Endpunkte dafür:
+- `POST /db/{schema}/schueler/vermerke` (3 Einträge pro Schüler)
+- `PATCH /db/{schema}/schueler/{id}/einwilligungen/{idEinwilligungsart}`
+- `PATCH /db/{schema}/schueler/{id}/lernplattformen/{idLernplattform}`
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-parents
+```
+
+API-Endpunkte dafür:
+- `POST /db/{schema}/schueler/erzieher/new/{idSchueler}/1` (1. Person anlegen)
+- `PATCH /db/{schema}/erzieher/{idErzieher}/stammdaten/2` (2. Person ergänzen)
+
+Einzeln ausführbar:
+
+```bash
+python mockfactory.py --patch-schueler-company
+```
+
+API-Endpunkte dafür:
+- `GET /db/{schema}/betriebe` (Liste verfügbarer Betriebe)
+- `POST /db/{schema}/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}`
 
 ### Schulstammdaten patchen
 
@@ -162,7 +241,7 @@ Dieses Modul wird automatisch während des `--full-setup` Workflows nach der Dat
 
 ### Kindergarten befüllen (synthetisch)
 
-Erzeugt 150 Betriebe mit Zufallsdaten (Namen aus Nachnamen kombiniert, Straßen aus katalogdaten/Strassen.csv, zufällige Kontaktdaten) **inklusive je zwei Ansprechpartnern** (Herr aus vornamen_m.json, Frau aus vornamen_w.json, zufällige Telefonnummern, E-Mail: rufname.nachname@betrieb.example.com):
+Erzeugt konfigurierbare Anzahl Betriebe mit Zufallsdaten (Namen aus Nachnamen kombiniert, Straßen aus katalogdaten/Strassen.csv, zufällige Kontaktdaten) **inklusive je zwei Ansprechpartnern** (Herr aus vornamen_m.json, Frau aus vornamen_w.json, zufällige Telefonnummern, E-Mail: rufname.nachname@betrieb.example.com). Die Anzahl wird aus `config.json` (`anzahlbetriebe`) gelesen (Standardwert: 150):
 
 ```bash
 python mockfactory.py --populate-betriebe
@@ -383,7 +462,7 @@ Die Initialisierung erstellt die Schulstruktur mit:
 
 ### Schulen befüllen
 
-Befüllt den Schulen-Katalog mit 190 NRW Schulen aus der CSV-Datei `katalogdaten/Schulen.csv`:
+Befüllt den Schulen-Katalog mit NRW Schulen aus CSV-Dateien. Abhängig vom `test`-Flag in `config.json` wird entweder `katalogdaten/Schulen.csv` (190 Einträge, `test: false`) oder `katalogdaten/SchulenTest.csv` (2 Einträge, `test: true`) verwendet:
 
 ```bash
 python mockfactory.py --populate-schulen
@@ -391,19 +470,20 @@ python mockfactory.py --populate-schulen
 
 **API-Endpunkt**: `POST /db/{schema}/schule/schulen/create`  
 **Authentifizierung**: Basic Auth mit `username` und `password`  
-**Quelle**: katalogdaten/Schulen.csv (190 Einträge), statistikdaten/Schulform.json
+**Quelle**: katalogdaten/Schulen.csv oder SchulenTest.csv, statistikdaten/Schulform.json
 
 Das Programm:
-1. Konvertiert CSV-Daten zu SVWS-kompatiblem JSON-Format
-2. Mappt die Schulform-Abkürzung (z.B. "BK", "G", "GY") zur idSchulform
+1. Prüft das `test`-Flag in `config.json` zur Dateiauswahl
+2. Konvertiert CSV-Daten zu SVWS-kompatiblem JSON-Format
+3. Mappt die Schulform-Abkürzung (z.B. "BK", "GG", "GY") zur idSchulform
    - Liest statistikdaten/Schulform.json für die Schulform-ID-Zuordnung
-   - Verwendet die ID aus dem erste History-Eintrag (z.B. "BK" → 1000)
-3. Generiert Email-Adressen im Format `{schulnummer}@schule.nrw.de`
-4. Bereinigt Telefon-/Fax-Nummern (entfernt Bindestriche)
-5. Erstellt alle 190 Schulen mit korrekten Schulform-IDs
+   - Verwendet die ID aus dem ersten History-Eintrag (z.B. "BK" → 1000, "GG" → 3000)
+4. Generiert Email-Adressen im Format `{schulnummer}@schule.nrw.de`
+5. Bereinigt Telefon-/Fax-Nummern (entfernt Bindestriche)
+6. Erstellt alle Schulen mit korrekten Schulform-IDs
 
-Schulen (190 Einträge):
-- 16 Schulformtypen (BK, G, GY, H, R, GE, SK, V, FÖ, PS, WB, etc.)
+Schulen (190 Einträge bei `test: false`, 2 Einträge bei `test: true`):
+- 16 Schulformtypen (BK, GG, GY, H, R, GE, SK, V, FÖ, PS, WB, etc.)
 - NRW-weite Abdeckung mit Adressdaten
 - Schulnummern, Kürzel und Kurzbezeichnungen
 - Telefon-, Fax- und Email-Kontakte
@@ -614,18 +694,23 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Floskeln (47 Einträge aus CSV-Datei)
   - Haltestellen (10 Einträge aus Text-Datei mit Zufallsdistanzen)
   - Lernplattformen (Einträge aus Text-Datei)
-  - Betriebe (150 synthetische Einträge mit je 2 Ansprechpartnern)
+  - Betriebe (konfigurierbare Anzahl synthetische Einträge mit je 2 Ansprechpartnern)
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
   - Lehrkräfte (Zahl aus config.json, standardmäßig 100 mit Geschlechtsmix, Titel, Amtsbezeichnung)
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
-- Complete Setup Workflow mit allen Katalogen (17 Schritte)
+- Schüler-Schulbesuch patchen (Zieljahrgänge 05-10, EF, Q1, Q2)
+- Schüler-Sprachbelegungen (E/S für Zieljahrgänge 05-10, EF, Q1, Q2)
+- Schüler-Telefonnummern (2 Einträge pro Schüler)
+- Schüler-Misc-Daten (3 Vermerke + Einwilligungen + Lernplattformen)
+- Schüler-Erzieherdaten (2 Personen pro Schüler)
+- Schüler-Betrieb-Zuordnung (1 zufälliger Betrieb pro Schüler)
+- Complete Setup Workflow mit allen Katalogen (25 Schritte)
 - Basis-Setup Workflow (Schema + Initialisierung)
 
 ### In Planung 🚧
 - Weitere Kataloge (Adressarten, Berufsfelder, etc.)
-- Schülerdaten mit realistischen Daten generieren
 - Klassen und Kurse erweitern (Schülerzuweisungen)
 - Stundenplan-Generierung
 - BK/SB Fachklassen-Unterstützung (erfordert Fachklassen-Konfiguration)

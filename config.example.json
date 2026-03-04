@@ -11,6 +11,16 @@
     "password": "",
     "schulnummer": 123456,
     "anzahllehrer": 100,
-    "anzahlschueler": 1200
+    "anzahlschueler": 1200,
+    "anzahlbetriebe": 50
+  },
+  "schooldata": {
+    "adresse": {
+      "strassenname": "Elisabethstraße",
+      "hausnummer": "6",
+      "hausnummerZusatz": "",
+      "plz": "42287",
+      "ort": "Wuppertal"
+    }
   }
 }

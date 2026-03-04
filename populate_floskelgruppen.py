@@ -19,25 +19,6 @@ def load_floskelgruppen_data():
         return []
 
 
-def get_color_for_index(index):
-    """Generate a color for the Floskelgruppe based on index"""
-    # Define a palette of colors for different phrase groups
-    colors = [
-        {"red": 220, "green": 220, "blue": 220},  # Light gray
-        {"red": 173, "green": 216, "blue": 230},  # Light blue
-        {"red": 144, "green": 238, "blue": 144},  # Light green
-        {"red": 255, "green": 218, "blue": 185},  # Peach puff
-        {"red": 230, "green": 230, "blue": 250},  # Lavender
-        {"red": 255, "green": 228, "blue": 181},  # Moccasin
-        {"red": 200, "green": 221, "blue": 242},  # Light blue (darker)
-        {"red": 220, "green": 240, "blue": 220},  # Honeydew
-        {"red": 240, "green": 230, "blue": 200},  # Wheat
-        {"red": 230, "green": 220, "blue": 240},  # Thistle
-        {"red": 255, "green": 240, "blue": 245},  # Lavender blush
-    ]
-    return colors[index % len(colors)]
-
-
 def populate_floskelgruppen(config):
     """Populate Floskelgruppen catalog"""
     floskelgruppen_data = load_floskelgruppen_data()
@@ -81,8 +62,7 @@ def populate_floskelgruppen(config):
         payload = {
             "kuerzel": latest.get('kuerzel', gruppe.get('bezeichner')),
             "bezeichnung": text,
-            "idFloskelgruppenart": latest.get('id', index),
-            "farbe": get_color_for_index(index)
+            "idFloskelgruppenart": latest.get('id', index)
         }
         
         try:
