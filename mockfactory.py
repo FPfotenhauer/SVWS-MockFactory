@@ -7,6 +7,7 @@ for the school server system
 
 import argparse
 import sys
+import time
 from check_server import load_config, check_server_alive
 from schema_manager import list_schemas, delete_schema
 from create_schema import create_schema
@@ -294,6 +295,13 @@ def main():
         created, skipped, failed = patch_schueler_company(config)
         return 0 if failed == 0 else 1
     elif args.full_setup:
+        full_setup_start = time.perf_counter()
+
+        def print_full_setup_duration():
+            elapsed_seconds = time.perf_counter() - full_setup_start
+            minutes, seconds = divmod(elapsed_seconds, 60)
+            print(f"\n⏱️ Gesamtzeit (--full-setup): {int(minutes):02d}:{seconds:05.2f} (mm:ss)")
+
         print("=" * 70)
         print("SVWS Mock Factory - Complete Setup with All Catalogs")
         print("=" * 70)
@@ -302,6 +310,7 @@ def main():
         print("\n[1/25] Checking server connectivity...")
         if not check_server_alive(config):
             print("Server is not accessible. Aborting setup.")
+            print_full_setup_duration()
             return 1
         print("✓ Server is alive")
         
@@ -309,6 +318,7 @@ def main():
         print("\n[2/25] Creating schema...")
         if not create_schema(config):
             print("Schema creation failed. Aborting setup.")
+            print_full_setup_duration()
             return 1
         print("✓ Schema created successfully")
         
@@ -316,6 +326,7 @@ def main():
         print("\n[3/25] Initializing database...")
         if not init_database(config):
             print("Database initialization failed. Aborting setup.")
+            print_full_setup_duration()
             return 1
         
         # Patch Schulstammdaten with test values
@@ -509,6 +520,7 @@ def main():
         print("\n" + "=" * 70)
         print("✓ Complete setup finished successfully!")
         print("=" * 70)
+        print_full_setup_duration()
         return 0
     else:
         parser.print_help()
