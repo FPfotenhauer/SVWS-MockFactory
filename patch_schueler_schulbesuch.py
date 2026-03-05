@@ -2,9 +2,11 @@
 Patch Schulbesuch for selected students.
 
 For students in year groups 05, 06, 07, 08, 09, 10, EF, Q1, Q2,
-load current Schulbesuch via GET /db/{schema}/schueler/{id}/schulbesuch
-and PATCH a randomly selected Grundschule from
+PATCH a randomly selected Grundschule from
 GET /db/{schema}/schule/schulen.
+
+Current Schulbesuch is loaded only when needed to resolve
+grundschuleEinschulungsjahr (e.g. missing/invalid Geburtsdatum).
 """
 
 import json
@@ -20,6 +22,7 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 RAND = random.Random()
+REQUEST_TIMEOUT = 20
 TARGET_JAHRGAENGE = {'05', '06', '07', '08', '09', '10', 'EF', 'Q1', 'Q2'}
 KINDERGARTEN_JAHRGAENGE = {'01', '02', '03', '04'}
 SCHULBESUCH_PATCH_KEY = 'idVorherigeSchule'
@@ -51,6 +54,27 @@ def extract_id(entry: dict) -> Optional[int]:
     return None
 
 
+def extract_year_prefix(value: Optional[str]) -> Optional[int]:
+    if isinstance(value, str) and len(value) >= 4 and value[:4].isdigit():
+        return int(value[:4])
+    return None
+
+
+def parse_optional_int(value: object) -> Optional[int]:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def create_http_session(auth: HTTPBasicAuth) -> requests.Session:
+    session = requests.Session()
+    session.auth = auth
+    session.verify = False
+    return session
+
+
 def normalize_jahrgang_kuerzel(value: Optional[str]) -> Optional[str]:
     if not isinstance(value, str):
         return None
@@ -65,10 +89,9 @@ def normalize_jahrgang_kuerzel(value: Optional[str]) -> Optional[str]:
     return str(int(digits)).zfill(2)
 
 
-def fetch_jahrgaenge(config, auth: HTTPBasicAuth) -> Dict[int, str]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/jahrgaenge"
-    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+def fetch_jahrgaenge(base_url: str, session: requests.Session) -> Dict[int, str]:
+    url = f'{base_url}/jahrgaenge'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     mapping: Dict[int, str] = {}
@@ -82,10 +105,9 @@ def fetch_jahrgaenge(config, auth: HTTPBasicAuth) -> Dict[int, str]:
     return mapping
 
 
-def fetch_stammdaten(config, auth: HTTPBasicAuth) -> dict:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/stammdaten"
-    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+def fetch_stammdaten(base_url: str, session: requests.Session) -> dict:
+    url = f'{base_url}/schule/stammdaten'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
     return data if isinstance(data, dict) else {}
@@ -136,10 +158,9 @@ def is_grundschule(entry: dict) -> bool:
     return 'grundschule' in _entry_text(entry)
 
 
-def fetch_grundschulen(config, auth: HTTPBasicAuth) -> List[int]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/schulen"
-    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+def fetch_grundschulen(base_url: str, session: requests.Session) -> List[int]:
+    url = f'{base_url}/schule/schulen'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     ids: List[int] = []
@@ -163,11 +184,10 @@ def fetch_grundschulen(config, auth: HTTPBasicAuth) -> List[int]:
     return unique_ids
 
 
-def fetch_kindergaerten(config, auth: HTTPBasicAuth) -> List[int]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/kindergaerten"
+def fetch_kindergaerten(base_url: str, session: requests.Session) -> List[int]:
+    url = f'{base_url}/kindergaerten'
     try:
-        resp = requests.get(url, auth=auth, verify=False, timeout=20)
+        resp = session.get(url, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
     except requests.exceptions.RequestException as exc:
         print(f"⚠️  Kindergärten konnten nicht geladen werden: {exc}")
@@ -192,26 +212,25 @@ def fetch_kindergaerten(config, auth: HTTPBasicAuth) -> List[int]:
     return unique_ids
 
 
-def fetch_schulbesuch(config, auth: HTTPBasicAuth, schueler_id: int) -> dict:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/schulbesuch"
-    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+def fetch_schulbesuch(base_url: str, session: requests.Session, schueler_id: int) -> dict:
+    url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
     return data if isinstance(data, dict) else {}
 
 
 def resolve_vorige_entlassdatum(aufnahmedatum: Optional[str]) -> str:
-    if isinstance(aufnahmedatum, str) and len(aufnahmedatum) >= 4 and aufnahmedatum[:4].isdigit():
-        year = int(aufnahmedatum[:4])
-    else:
+    year = extract_year_prefix(aufnahmedatum)
+    if year is None:
         year = 2023
     return f'{year:04d}-07-31'
 
 
 def resolve_year_from_aufnahmedatum(aufnahmedatum: Optional[str]) -> int:
-    if isinstance(aufnahmedatum, str) and len(aufnahmedatum) >= 4 and aufnahmedatum[:4].isdigit():
-        return int(aufnahmedatum[:4])
+    year = extract_year_prefix(aufnahmedatum)
+    if year is not None:
+        return year
     return date.today().year
 
 
@@ -226,23 +245,21 @@ def resolve_sek1_erste_schulform(stammdaten: dict) -> str:
 
 def resolve_grundschule_einschulungsjahr(
     geburtsdatum: Optional[str],
-    schulbesuch: dict,
+    existing_einschulungsjahr: Optional[int] = None,
 ) -> int:
-    if isinstance(geburtsdatum, str) and len(geburtsdatum) >= 4 and geburtsdatum[:4].isdigit():
-        return int(geburtsdatum[:4]) + 6
+    geburtsjahr = extract_year_prefix(geburtsdatum)
+    if geburtsjahr is not None:
+        return geburtsjahr + 6
 
-    existing = schulbesuch.get('grundschuleEinschulungsjahr')
-    if isinstance(existing, int):
-        return existing
-    if isinstance(existing, str) and existing.isdigit():
-        return int(existing)
+    if existing_einschulungsjahr is not None:
+        return existing_einschulungsjahr
 
     return date.today().year - 4
 
 
 def patch_schulbesuch(
-    config,
-    auth: HTTPBasicAuth,
+    base_url: str,
+    session: requests.Session,
     schueler_id: int,
     grundschule_id: int,
     vorige_entlassdatum: str,
@@ -250,8 +267,7 @@ def patch_schulbesuch(
     sek1_wechsel: int,
     sek1_erste_schulform: str,
 ) -> requests.Response:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/schulbesuch"
+    url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
     payload = {
         SCHULBESUCH_PATCH_KEY: grundschule_id,
         'vorigeEntlassgrundID': VORIGE_ENTLASSGRUND_ID,
@@ -265,23 +281,22 @@ def patch_schulbesuch(
         'sekIErsteSchulform': sek1_erste_schulform,
     }
 
-    return requests.patch(url, json=payload, auth=auth, verify=False, timeout=20)
+    return session.patch(url, json=payload, timeout=REQUEST_TIMEOUT)
 
 
 def patch_kindergarten(
-    config,
-    auth: HTTPBasicAuth,
+    base_url: str,
+    session: requests.Session,
     schueler_id: int,
     kindergarten_id: int,
     dauerbesuch_id: int,
 ) -> requests.Response:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/schulbesuch"
+    url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
     payload = {
         'idKindergarten': kindergarten_id,
         'idDauerKindergartenbesuch': dauerbesuch_id,
     }
-    return requests.patch(url, json=payload, auth=auth, verify=False, timeout=20)
+    return session.patch(url, json=payload, timeout=REQUEST_TIMEOUT)
 
 
 def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
@@ -293,92 +308,147 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
 
     db = config['database']
     auth = HTTPBasicAuth(db['username'], db['password'])
+    base_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
 
-    print('Lade Schulstammdaten...')
-    try:
-        stammdaten = fetch_stammdaten(config, auth)
-    except requests.exceptions.RequestException as exc:
-        print(f"❌ Schulstammdaten konnten nicht geladen werden: {exc}")
-        return 0, 0, len(schueler_list)
+    with create_http_session(auth) as session:
+        print('Lade Schulstammdaten...')
+        try:
+            stammdaten = fetch_stammdaten(base_url, session)
+        except requests.exceptions.RequestException as exc:
+            print(f"❌ Schulstammdaten konnten nicht geladen werden: {exc}")
+            return 0, 0, len(schueler_list)
 
-    sek1_erste_schulform = resolve_sek1_erste_schulform(stammdaten)
+        sek1_erste_schulform = resolve_sek1_erste_schulform(stammdaten)
 
-    print('Lade Jahrgänge...')
-    try:
-        jahrgang_id_to_kuerzel = fetch_jahrgaenge(config, auth)
-    except requests.exceptions.RequestException as exc:
-        print(f"❌ Jahrgänge konnten nicht geladen werden: {exc}")
-        return 0, 0, len(schueler_list)
+        print('Lade Jahrgänge...')
+        try:
+            jahrgang_id_to_kuerzel = fetch_jahrgaenge(base_url, session)
+        except requests.exceptions.RequestException as exc:
+            print(f"❌ Jahrgänge konnten nicht geladen werden: {exc}")
+            return 0, 0, len(schueler_list)
 
-    print('Lade Grundschulen...')
-    try:
-        grundschulen_ids = fetch_grundschulen(config, auth)
-    except requests.exceptions.RequestException as exc:
-        print(f"❌ Schulen konnten nicht geladen werden: {exc}")
-        return 0, 0, len(schueler_list)
+        print('Lade Grundschulen...')
+        try:
+            grundschulen_ids = fetch_grundschulen(base_url, session)
+        except requests.exceptions.RequestException as exc:
+            print(f"❌ Schulen konnten nicht geladen werden: {exc}")
+            return 0, 0, len(schueler_list)
 
-    if not grundschulen_ids:
-        print('❌ Keine Grundschulen im Katalog gefunden.')
-        return 0, 0, len(schueler_list)
+        if not grundschulen_ids:
+            print('❌ Keine Grundschulen im Katalog gefunden.')
+            return 0, 0, len(schueler_list)
 
-    print('Lade Kindergärten...')
-    try:
-        kindergaerten_ids = fetch_kindergaerten(config, auth)
-    except requests.exceptions.RequestException as exc:
-        print(f"⚠️  Kindergärten-API-Fehler: {exc}")
-        kindergaerten_ids = []
+        print('Lade Kindergärten...')
+        try:
+            kindergaerten_ids = fetch_kindergaerten(base_url, session)
+        except requests.exceptions.RequestException as exc:
+            print(f"⚠️  Kindergärten-API-Fehler: {exc}")
+            kindergaerten_ids = []
 
-    total = len(schueler_list)
-    print(f'Gefunden: {total} Schüler im Cache')
-    print(f'Verfügbare Grundschulen: {len(grundschulen_ids)}')
-    print(f'Verfügbare Kindergärten: {len(kindergaerten_ids)}')
-    print('Zieljahrgänge (Grundschule): 05, 06, 07, 08, 09, 10, EF, Q1, Q2')
-    print('Zieljahrgänge (Kindergarten): 01, 02, 03, 04')
+        total = len(schueler_list)
+        print(f'Gefunden: {total} Schüler im Cache')
+        print(f'Verfügbare Grundschulen: {len(grundschulen_ids)}')
+        print(f'Verfügbare Kindergärten: {len(kindergaerten_ids)}')
+        print('Zieljahrgänge (Grundschule): 05, 06, 07, 08, 09, 10, EF, Q1, Q2')
+        print('Zieljahrgänge (Kindergarten): 01, 02, 03, 04')
 
-    patched = 0
-    skipped = 0
-    failed = 0
+        patched = 0
+        skipped = 0
+        failed = 0
 
-    for idx, schueler in enumerate(schueler_list, start=1):
-        schueler_id = extract_id(schueler)
-        vorname = schueler.get('vorname', '')
-        nachname = schueler.get('nachname', '')
+        for idx, schueler in enumerate(schueler_list, start=1):
+            schueler_id = extract_id(schueler)
+            vorname = schueler.get('vorname', '')
+            nachname = schueler.get('nachname', '')
 
-        if schueler_id is None:
-            failed += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache")
-            continue
+            if schueler_id is None:
+                failed += 1
+                print(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache")
+                continue
 
-        jahrgang_kuerzel = resolve_jahrgang_kuerzel(schueler, jahrgang_id_to_kuerzel)
+            jahrgang_kuerzel = resolve_jahrgang_kuerzel(schueler, jahrgang_id_to_kuerzel)
 
-        # Handle Kindergarten for grades 01-04
-        if jahrgang_kuerzel in KINDERGARTEN_JAHRGAENGE:
-            if not kindergaerten_ids:
+            # Handle Kindergarten for grades 01-04
+            if jahrgang_kuerzel in KINDERGARTEN_JAHRGAENGE:
+                if not kindergaerten_ids:
+                    skipped += 1
+                    print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Keine Kindergärten verfügbar")
+                    continue
+
+                try:
+                    kindergarten_id = RAND.choice(kindergaerten_ids)
+                    dauerbesuch_id = RAND.choice([4, 5])
+
+                    patch_resp = patch_kindergarten(
+                        base_url,
+                        session,
+                        schueler_id,
+                        kindergarten_id,
+                        dauerbesuch_id,
+                    )
+
+                    if patch_resp.status_code in (200, 201, 204):
+                        patched += 1
+                        print(
+                            f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
+                            f"✓ Kindergarten {kindergarten_id}, Besuchsdauer {dauerbesuch_id}"
+                        )
+                    else:
+                        failed += 1
+                        error_text = patch_resp.text[:180].replace('\n', ' ')
+                        print(
+                            f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
+                            f"✗ PATCH fehlgeschlagen (HTTP {patch_resp.status_code}) - {error_text}"
+                        )
+                except requests.exceptions.RequestException as exc:
+                    failed += 1
+                    print(f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): ✗ Request-Fehler: {exc}")
+                continue
+
+            # Handle Grundschule for grades 05-Q2
+            if jahrgang_kuerzel not in TARGET_JAHRGAENGE:
                 skipped += 1
-                print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Keine Kindergärten verfügbar")
+                print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Jahrgang {jahrgang_kuerzel or '-'} nicht im Zielbereich")
                 continue
 
             try:
-                kindergarten_id = RAND.choice(kindergaerten_ids)
-                dauerbesuch_id = RAND.choice([4, 5])
+                geburtsdatum = schueler.get('geburtsdatum')
+                existing_einschulungsjahr = None
 
-                patch_resp = patch_kindergarten(
-                    config,
-                    auth,
-                    schueler_id,
-                    kindergarten_id,
-                    dauerbesuch_id,
+                if extract_year_prefix(geburtsdatum) is None:
+                    schulbesuch = fetch_schulbesuch(base_url, session, schueler_id)
+                    existing_einschulungsjahr = parse_optional_int(schulbesuch.get('grundschuleEinschulungsjahr'))
+
+                grundschule_id = RAND.choice(grundschulen_ids)
+                vorige_entlassdatum = resolve_vorige_entlassdatum(schueler.get('aufnahmedatum'))
+                sek1_wechsel = resolve_year_from_aufnahmedatum(schueler.get('aufnahmedatum'))
+                grundschule_einschulungsjahr = resolve_grundschule_einschulungsjahr(
+                    geburtsdatum,
+                    existing_einschulungsjahr,
                 )
 
+                patch_resp = patch_schulbesuch(
+                    base_url,
+                    session,
+                    schueler_id,
+                    grundschule_id,
+                    vorige_entlassdatum,
+                    grundschule_einschulungsjahr,
+                    sek1_wechsel,
+                    sek1_erste_schulform,
+                )
                 if patch_resp.status_code in (200, 201, 204):
                     patched += 1
                     print(
                         f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
-                        f"✓ Kindergarten {kindergarten_id}, Besuchsdauer {dauerbesuch_id}"
+                        f"✓ {SCHULBESUCH_PATCH_KEY}={grundschule_id}, "
+                        f"vorigeEntlassdatum={vorige_entlassdatum}, "
+                        f"grundschuleEinschulungsjahr={grundschule_einschulungsjahr}, "
+                        f"sekIWechsel={sek1_wechsel}, sekIErsteSchulform={sek1_erste_schulform}"
                     )
                 else:
                     failed += 1
-                    error_text = patch_resp.text[:180].replace('\n', ' ')
+                    error_text = patch_resp.text[:220].replace('\n', ' ')
                     print(
                         f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
                         f"✗ PATCH fehlgeschlagen (HTTP {patch_resp.status_code}) - {error_text}"
@@ -386,61 +456,14 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
             except requests.exceptions.RequestException as exc:
                 failed += 1
                 print(f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): ✗ Request-Fehler: {exc}")
-            continue
 
-        # Handle Grundschule for grades 05-Q2
-        if jahrgang_kuerzel not in TARGET_JAHRGAENGE:
-            skipped += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Jahrgang {jahrgang_kuerzel or '-'} nicht im Zielbereich")
-            continue
+        print(f"\nErgebnis: {patched} gepatcht, {skipped} übersprungen, {failed} fehlgeschlagen")
+        if failed == 0:
+            print('✓ Schüler-Schulbesuch erfolgreich aktualisiert!')
+        else:
+            print(f'⚠️  {failed} Schüler konnten nicht gepatcht werden')
 
-        try:
-            schulbesuch = fetch_schulbesuch(config, auth, schueler_id)
-            grundschule_id = RAND.choice(grundschulen_ids)
-            vorige_entlassdatum = resolve_vorige_entlassdatum(schueler.get('aufnahmedatum'))
-            sek1_wechsel = resolve_year_from_aufnahmedatum(schueler.get('aufnahmedatum'))
-            grundschule_einschulungsjahr = resolve_grundschule_einschulungsjahr(
-                schueler.get('geburtsdatum'),
-                schulbesuch,
-            )
-
-            patch_resp = patch_schulbesuch(
-                config,
-                auth,
-                schueler_id,
-                grundschule_id,
-                vorige_entlassdatum,
-                grundschule_einschulungsjahr,
-                sek1_wechsel,
-                sek1_erste_schulform,
-            )
-            if patch_resp.status_code in (200, 201, 204):
-                patched += 1
-                print(
-                    f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
-                    f"✓ {SCHULBESUCH_PATCH_KEY}={grundschule_id}, "
-                    f"vorigeEntlassdatum={vorige_entlassdatum}, "
-                    f"grundschuleEinschulungsjahr={grundschule_einschulungsjahr}, "
-                    f"sekIWechsel={sek1_wechsel}, sekIErsteSchulform={sek1_erste_schulform}"
-                )
-            else:
-                failed += 1
-                error_text = patch_resp.text[:220].replace('\n', ' ')
-                print(
-                    f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
-                    f"✗ PATCH fehlgeschlagen (HTTP {patch_resp.status_code}) - {error_text}"
-                )
-        except requests.exceptions.RequestException as exc:
-            failed += 1
-            print(f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): ✗ Request-Fehler: {exc}")
-
-    print(f"\nErgebnis: {patched} gepatcht, {skipped} übersprungen, {failed} fehlgeschlagen")
-    if failed == 0:
-        print('✓ Schüler-Schulbesuch erfolgreich aktualisiert!')
-    else:
-        print(f'⚠️  {failed} Schüler konnten nicht gepatcht werden')
-
-    return patched, skipped, failed
+        return patched, skipped, failed
 
 
 if __name__ == '__main__':

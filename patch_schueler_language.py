@@ -7,14 +7,25 @@ POST /db/{schema}/schueler/{id}/sprachen/belegungen
 """
 
 import json
+import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import requests
 from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+REQUEST_TIMEOUT = 20
+RETRY_BACKOFF_SECONDS = 0.2
+DEFAULT_LANGUAGE_WORKERS = '4'
+_THREAD_LOCAL = threading.local()
+_THREAD_SESSIONS: List[requests.Session] = []
+_THREAD_SESSIONS_LOCK = threading.Lock()
 
 TARGET_JAHRGAENGE = {'05', '06', '07', '08', '09', '10', 'EF', 'Q1', 'Q2'}
 LANGUAGE_BELEGUNGEN = (
@@ -33,6 +44,64 @@ LANGUAGE_BELEGUNGEN = (
         'belegungBisAbschnitt': 2,
     },
 )
+
+
+def create_http_session(auth: HTTPBasicAuth) -> requests.Session:
+    session = requests.Session()
+    session.auth = auth
+    session.verify = False
+    return session
+
+
+def get_thread_session(auth: HTTPBasicAuth) -> requests.Session:
+    session = getattr(_THREAD_LOCAL, 'session', None)
+    if session is None:
+        session = create_http_session(auth)
+        _THREAD_LOCAL.session = session
+        with _THREAD_SESSIONS_LOCK:
+            _THREAD_SESSIONS.append(session)
+    return session
+
+
+def close_thread_sessions() -> None:
+    with _THREAD_SESSIONS_LOCK:
+        sessions = list(_THREAD_SESSIONS)
+        _THREAD_SESSIONS.clear()
+
+    for session in sessions:
+        try:
+            session.close()
+        except Exception:
+            pass
+
+
+def request_with_retry(
+    session: requests.Session,
+    method: str,
+    url: str,
+    payload: Optional[dict] = None,
+    success_codes: Tuple[int, ...] = (200, 201, 204),
+    retries: int = 3,
+) -> Tuple[Optional[requests.Response], Optional[str]]:
+    last_error: Optional[str] = None
+    for attempt in range(1, retries + 1):
+        try:
+            resp = session.request(method=method, url=url, json=payload, timeout=REQUEST_TIMEOUT)
+        except requests.exceptions.RequestException as exc:
+            resp = None
+            last_error = str(exc)
+
+        if resp is not None and resp.status_code in success_codes:
+            return resp, None
+
+        should_retry = resp is None or resp.status_code >= 500
+        if attempt < retries and should_retry:
+            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+            continue
+
+        return resp, last_error
+
+    return None, last_error
 
 
 def load_cache() -> List[dict]:
@@ -70,10 +139,37 @@ def normalize_jahrgang_kuerzel(value: Optional[str]) -> Optional[str]:
     return str(int(digits)).zfill(2)
 
 
-def fetch_jahrgaenge(config, auth: HTTPBasicAuth) -> Dict[int, str]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/jahrgaenge"
-    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+def normalize_sprache_kuerzel(value: object) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().upper()
+    return normalized or None
+
+
+def extract_existing_sprachen(data: object) -> Set[str]:
+    result: Set[str] = set()
+    if not isinstance(data, list):
+        return result
+
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+
+        kuerzel = normalize_sprache_kuerzel(item.get('sprache'))
+        if kuerzel is None:
+            kuerzel = normalize_sprache_kuerzel(item.get('kuerzel'))
+        if kuerzel is None:
+            kuerzel = normalize_sprache_kuerzel(item.get('spracheKuerzel'))
+
+        if kuerzel is not None:
+            result.add(kuerzel)
+
+    return result
+
+
+def fetch_jahrgaenge(base_url: str, session: requests.Session) -> Dict[int, str]:
+    url = f'{base_url}/jahrgaenge'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     mapping: Dict[int, str] = {}
@@ -109,13 +205,21 @@ def patch_schuler_language(config) -> Tuple[int, int, int]:
 
     db = config['database']
     auth = HTTPBasicAuth(db['username'], db['password'])
+    base_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
 
     print('Lade Jahrgänge...')
     try:
-        jahrgang_id_to_kuerzel = fetch_jahrgaenge(config, auth)
+        with create_http_session(auth) as session:
+            jahrgang_id_to_kuerzel = fetch_jahrgaenge(base_url, session)
     except requests.exceptions.RequestException as exc:
         print(f"❌ Jahrgänge konnten nicht geladen werden: {exc}")
         return 0, 0, len(schueler_list)
+
+    workers_raw = db.get('language_workers', os.getenv('SVWS_LANGUAGE_WORKERS', DEFAULT_LANGUAGE_WORKERS))
+    try:
+        workers = max(1, min(16, int(workers_raw)))
+    except Exception:
+        workers = 4
 
     total = len(schueler_list)
     created = 0
@@ -124,62 +228,128 @@ def patch_schuler_language(config) -> Tuple[int, int, int]:
 
     print(f'Gefunden: {total} Schüler im Cache')
     print('Zieljahrgänge: 05, 06, 07, 08, 09, 10, EF, Q1, Q2')
+    print(f'Parallelität: {workers} Worker')
 
-    for idx, schueler in enumerate(schueler_list, start=1):
+    def process_student(args: Tuple[int, dict]) -> Tuple[int, int, int, List[str]]:
+        idx, schueler = args
+        lines: List[str] = []
+
         schueler_id = extract_id(schueler)
         vorname = schueler.get('vorname', '')
         nachname = schueler.get('nachname', '')
 
         if schueler_id is None:
-            failed += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache")
-            continue
+            lines.append(f"[{idx}/{total}] {vorname} {nachname}: ⚠️  Keine ID im Cache")
+            return 0, 0, 1, lines
 
         jahrgang_kuerzel = resolve_jahrgang_kuerzel(schueler, jahrgang_id_to_kuerzel)
         if jahrgang_kuerzel not in TARGET_JAHRGAENGE:
-            skipped += 1
-            print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Jahrgang {jahrgang_kuerzel or '-'} nicht im Zielbereich")
-            continue
+            lines.append(f"[{idx}/{total}] {vorname} {nachname}: ↷ Jahrgang {jahrgang_kuerzel or '-'} nicht im Zielbereich")
+            return 0, 1, 0, lines
 
         student_created = 0
         student_skipped = 0
         student_failed = 0
 
-        for payload in LANGUAGE_BELEGUNGEN:
-            url = (
-                f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
-                f"/schueler/{schueler_id}/sprachen/belegungen"
+        session = get_thread_session(auth)
+        url = f'{base_url}/schueler/{schueler_id}/sprachen/belegungen'
+        existing_sprachen: Set[str] = set()
+
+        existing_resp, existing_err = request_with_retry(
+            session,
+            'GET',
+            url,
+            success_codes=(200,),
+        )
+        if existing_resp is not None:
+            try:
+                existing_sprachen = extract_existing_sprachen(existing_resp.json())
+            except Exception:
+                existing_sprachen = set()
+        elif existing_err:
+            lines.append(
+                f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
+                f"⚠️  Belegungen konnten nicht vorab geladen werden ({existing_err})"
             )
 
-            try:
-                resp = requests.post(url, json=payload, auth=auth, verify=False, timeout=20)
-                if resp.status_code in (200, 201):
-                    created += 1
-                    student_created += 1
-                elif resp.status_code == 409:
-                    skipped += 1
-                    student_skipped += 1
-                else:
-                    failed += 1
-                    student_failed += 1
-                    error_text = resp.text[:180].replace('\n', ' ')
-                    print(
-                        f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}) - {payload['sprache']}: "
-                        f"✗ HTTP {resp.status_code} {error_text}"
-                    )
-            except requests.exceptions.RequestException as exc:
-                failed += 1
+        for payload in LANGUAGE_BELEGUNGEN:
+            payload_sprache = normalize_sprache_kuerzel(payload.get('sprache'))
+            if payload_sprache is not None and payload_sprache in existing_sprachen:
+                student_skipped += 1
+                continue
+
+            resp, error = request_with_retry(
+                session,
+                'POST',
+                url,
+                payload=payload,
+                success_codes=(200, 201, 409),
+            )
+
+            if resp is None:
                 student_failed += 1
-                print(
+                lines.append(
                     f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}) - {payload['sprache']}: "
-                    f"✗ Request-Fehler: {exc}"
+                    f"✗ Request-Fehler: {error or 'unbekannt'}"
+                )
+                continue
+
+            if resp.status_code in (200, 201):
+                student_created += 1
+                if payload_sprache is not None:
+                    existing_sprachen.add(payload_sprache)
+            elif resp.status_code == 409:
+                student_skipped += 1
+                if payload_sprache is not None:
+                    existing_sprachen.add(payload_sprache)
+            else:
+                # Some backends may return HTTP 500 instead of 409 on duplicates.
+                if resp.status_code >= 500 and payload_sprache is not None:
+                    verify_resp, _ = request_with_retry(
+                        session,
+                        'GET',
+                        url,
+                        success_codes=(200,),
+                        retries=1,
+                    )
+                    if verify_resp is not None:
+                        try:
+                            verify_existing = extract_existing_sprachen(verify_resp.json())
+                        except Exception:
+                            verify_existing = set()
+                        if payload_sprache in verify_existing:
+                            student_skipped += 1
+                            existing_sprachen.add(payload_sprache)
+                            continue
+
+                student_failed += 1
+                error_text = resp.text[:180].replace('\n', ' ')
+                lines.append(
+                    f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}) - {payload['sprache']}: "
+                    f"✗ HTTP {resp.status_code} {error_text}"
                 )
 
         if student_failed == 0:
-            print(
+            lines.append(
                 f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
                 f"✓ erstellt={student_created}, übersprungen={student_skipped}"
             )
+
+        return student_created, student_skipped, student_failed, lines
+
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            for local_created, local_skipped, local_failed, lines in executor.map(
+                process_student,
+                enumerate(schueler_list, start=1),
+            ):
+                created += local_created
+                skipped += local_skipped
+                failed += local_failed
+                for line in lines:
+                    print(line)
+    finally:
+        close_thread_sessions()
 
     print(f"\nErgebnis: {created} erstellt, {skipped} übersprungen, {failed} fehlgeschlagen")
     if failed == 0:

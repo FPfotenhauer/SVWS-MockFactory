@@ -22,6 +22,8 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 RAND = random.Random()
+REQUEST_TIMEOUT = 20
+DEFAULT_MISC_WORKERS = '6'
 LP_EINWILLIGUNG_KEYS = (
     'einwilligungAbgefragt',
     'einwilligungNutzung',
@@ -50,6 +52,14 @@ def get_session(auth: HTTPBasicAuth) -> requests.Session:
     return session
 
 
+def parse_optional_int(value) -> Optional[int]:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
 def request_with_retry(
     session: requests.Session,
     method: str,
@@ -60,7 +70,7 @@ def request_with_retry(
 ) -> Optional[requests.Response]:
     for attempt in range(1, retries + 1):
         try:
-            resp = session.request(method=method, url=url, json=payload, timeout=20)
+            resp = session.request(method=method, url=url, json=payload, timeout=REQUEST_TIMEOUT)
         except requests.exceptions.RequestException:
             resp = None
 
@@ -97,13 +107,9 @@ def extract_id(entry: dict) -> Optional[int]:
     return None
 
 
-def fetch_vermerkarten_ids(config) -> List[int]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/vermerkarten"
-
-    auth = HTTPBasicAuth(db['username'], db['password'])
-    session = get_session(auth)
-    resp = session.get(url, timeout=20)
+def fetch_vermerkarten_ids(base_url: str, session: requests.Session) -> List[int]:
+    url = f'{base_url}/schule/vermerkarten'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 
     data = resp.json()
@@ -132,52 +138,38 @@ def build_vermerk_payload(schueler_id: int, vermerkarten_ids: List[int]) -> dict
     }
 
 
-def fetch_student_einwilligungen(config, auth: HTTPBasicAuth, schueler_id: int) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/einwilligungen"
-    session = get_session(auth)
-    resp = session.get(url, timeout=20)
+def fetch_student_einwilligungen(base_url: str, session: requests.Session, schueler_id: int) -> List[dict]:
+    url = f'{base_url}/schueler/{schueler_id}/einwilligungen'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-def patch_student_einwilligung(config, auth: HTTPBasicAuth, schueler_id: int, id_einwilligungsart: int) -> bool:
-    db = config['database']
-    url = (
-        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
-        f"/schueler/{schueler_id}/einwilligungen/{id_einwilligungsart}"
-    )
+def patch_student_einwilligung(base_url: str, session: requests.Session, schueler_id: int, id_einwilligungsart: int) -> bool:
+    url = f'{base_url}/schueler/{schueler_id}/einwilligungen/{id_einwilligungsart}'
     payload = {
         'abgefragt': True,
         'status': True,
     }
-    session = get_session(auth)
     resp = request_with_retry(session, 'PATCH', url, payload=payload, success_codes=(200, 204))
     return resp is not None and resp.status_code in (200, 204)
 
 
-def fetch_student_lernplattformen(config, auth: HTTPBasicAuth, schueler_id: int) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/lernplattformen"
-    session = get_session(auth)
-    resp = session.get(url, timeout=20)
+def fetch_student_lernplattformen(base_url: str, session: requests.Session, schueler_id: int) -> List[dict]:
+    url = f'{base_url}/schueler/{schueler_id}/lernplattformen'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-def patch_student_lernplattform(config, auth: HTTPBasicAuth, schueler_id: int, id_lernplattform: int) -> bool:
-    db = config['database']
-    url = (
-        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
-        f"/schueler/{schueler_id}/lernplattformen/{id_lernplattform}"
-    )
+def patch_student_lernplattform(base_url: str, session: requests.Session, schueler_id: int, id_lernplattform: int) -> bool:
+    url = f'{base_url}/schueler/{schueler_id}/lernplattformen/{id_lernplattform}'
     payload = {
         'einwilligungAbgefragt': True,
         'einwilligungNutzung': True,
         'einwilligungAudiokonferenz': True,
         'einwilligungVideokonferenz': True,
     }
-    session = get_session(auth)
     resp = request_with_retry(session, 'PATCH', url, payload=payload, success_codes=(200, 204))
     return resp is not None and resp.status_code in (200, 204)
 
@@ -198,9 +190,14 @@ def patch_schueler_misc(config):
         print('⚠️  Keine Schüler im Cache gefunden.')
         return 0, 0
 
+    db = config['database']
+    base_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+    auth = HTTPBasicAuth(db['username'], db['password'])
+    session = get_session(auth)
+
     print('Lade Vermerkarten...')
     try:
-        vermerkarten_ids = fetch_vermerkarten_ids(config)
+        vermerkarten_ids = fetch_vermerkarten_ids(base_url, session)
     except requests.exceptions.RequestException as exc:
         print(f"❌ Vermerkarten konnten nicht geladen werden: {exc}")
         return 0, len(schueler_list)
@@ -213,10 +210,8 @@ def patch_schueler_misc(config):
     print(f'Gefunden: {total} Schüler im Cache')
     print(f'Verfügbare Vermerkarten: {len(vermerkarten_ids)}')
 
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/vermerke"
-    auth = HTTPBasicAuth(db['username'], db['password'])
-    workers_raw = db.get('misc_workers', os.getenv('SVWS_MISC_WORKERS', '3'))
+    url = f'{base_url}/schueler/vermerke'
+    workers_raw = db.get('misc_workers', os.getenv('SVWS_MISC_WORKERS', DEFAULT_MISC_WORKERS))
     try:
         workers = max(1, min(16, int(workers_raw)))
     except Exception:
@@ -263,15 +258,15 @@ def patch_schueler_misc(config):
         student_lernplattformen_ok = 0
 
         try:
-            einwilligungen = fetch_student_einwilligungen(config, auth, schueler_id)
+            einwilligungen = fetch_student_einwilligungen(base_url, session, schueler_id)
             for einwilligung in einwilligungen:
-                id_einwilligungsart = extract_id({'id': einwilligung.get('idEinwilligungsart')})
+                id_einwilligungsart = parse_optional_int(einwilligung.get('idEinwilligungsart'))
                 if id_einwilligungsart is None:
                     continue
                 if not needs_einwilligung_update(einwilligung):
                     continue
                 try:
-                    if patch_student_einwilligung(config, auth, schueler_id, id_einwilligungsart):
+                    if patch_student_einwilligung(base_url, session, schueler_id, id_einwilligungsart):
                         student_einwilligungen_ok += 1
                     else:
                         local_failed += 1
@@ -284,15 +279,15 @@ def patch_schueler_misc(config):
             student_failed += 1
 
         try:
-            lernplattformen = fetch_student_lernplattformen(config, auth, schueler_id)
+            lernplattformen = fetch_student_lernplattformen(base_url, session, schueler_id)
             for lernplattform in lernplattformen:
-                id_lernplattform = extract_id({'id': lernplattform.get('idLernplattform')})
+                id_lernplattform = parse_optional_int(lernplattform.get('idLernplattform'))
                 if id_lernplattform is None:
                     continue
                 if not needs_lernplattform_update(lernplattform):
                     continue
                 try:
-                    if patch_student_lernplattform(config, auth, schueler_id, id_lernplattform):
+                    if patch_student_lernplattform(base_url, session, schueler_id, id_lernplattform):
                         student_lernplattformen_ok += 1
                     else:
                         local_failed += 1

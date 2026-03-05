@@ -25,6 +25,30 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 RAND = random.Random()
+API_TIMEOUT = 20
+PATCH_TIMEOUT = 60
+OPENPLZ_CONNECT_TIMEOUT = 2
+OPENPLZ_READ_TIMEOUT = 3
+
+
+def create_api_session(auth: HTTPBasicAuth) -> requests.Session:
+    session = requests.Session()
+    session.auth = auth
+    session.verify = False
+    return session
+
+
+def create_openplz_session() -> requests.Session:
+    return requests.Session()
+
+
+def close_session(session: Optional[requests.Session]) -> None:
+    if session is None:
+        return
+    try:
+        session.close()
+    except Exception:
+        pass
 
 
 def slugify_mail_part(text: str) -> str:
@@ -140,54 +164,30 @@ def load_streets_by_postal(required_postals: Optional[set] = None) -> Dict[str, 
     return result
 
 
-def fetch_stammdaten(config) -> dict:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/stammdaten"
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+def fetch_stammdaten(base_url: str, session: requests.Session) -> dict:
+    url = f'{base_url}/schule/stammdaten'
+    resp = session.get(url, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-def fetch_orte(config) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/orte"
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+def fetch_orte(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/orte'
+    resp = session.get(url, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-def fetch_nationalitaeten(config) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/allgemein/nationalitaeten"
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+def fetch_nationalitaeten(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/schule/allgemein/nationalitaeten'
+    resp = session.get(url, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-def fetch_haltestellen(config) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/haltestellen"
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+def fetch_haltestellen(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/haltestellen'
+    resp = session.get(url, timeout=API_TIMEOUT)
     if resp.status_code >= 400:
         return []
     try:
@@ -196,15 +196,9 @@ def fetch_haltestellen(config) -> List[dict]:
         return []
 
 
-def fetch_fahrschuelerarten(config) -> List[dict]:
-    db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/fahrschuelerarten"
-    resp = requests.get(
-        url,
-        auth=HTTPBasicAuth(db['username'], db['password']),
-        verify=False,
-        timeout=20,
-    )
+def fetch_fahrschuelerarten(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/schueler/fahrschuelerarten'
+    resp = session.get(url, timeout=API_TIMEOUT)
     if resp.status_code >= 400:
         return []
     try:
@@ -289,7 +283,8 @@ def fetch_openplz_streets(
     postal_code: str,
     cache: Dict[Tuple[str, str], Tuple[List[str], str]],
     budget_state: Dict[str, int],
-    timeout: int = 3,
+    session: Optional[requests.Session] = None,
+    timeout: int = OPENPLZ_READ_TIMEOUT,
 ) -> Tuple[List[str], str]:
     key = (locality.casefold(), postal_code)
     if key in cache:
@@ -311,7 +306,8 @@ def fetch_openplz_streets(
 
     try:
         budget_state['used'] += 1
-        resp = requests.get(url, params=params, timeout=(2, timeout))
+        client = session if session is not None else requests
+        resp = client.get(url, params=params, timeout=(OPENPLZ_CONNECT_TIMEOUT, timeout))
         if resp.status_code >= 400:
             cache[key] = ([], 'http_error')
             return [], 'http_error'
@@ -329,7 +325,7 @@ def fetch_openplz_streets(
                 cache[key] = ([], 'budget_exceeded')
                 return [], 'budget_exceeded'
             budget_state['used'] += 1
-            resp2 = requests.get(url, params=params_postal_only, timeout=(2, timeout))
+            resp2 = client.get(url, params=params_postal_only, timeout=(OPENPLZ_CONNECT_TIMEOUT, timeout))
             if resp2.status_code < 400:
                 streets = _extract_street_names_from_openplz_payload(resp2.json())
                 mode = 'postal_only' if streets else 'none'
@@ -444,6 +440,7 @@ def bool_with_probability(prob_true: float) -> bool:
 def pick_wohnort(
     school_ort_id: Optional[int],
     all_ort_ids: List[int],
+    other_ort_ids: List[int],
 ) -> Optional[int]:
     if not all_ort_ids:
         return school_ort_id
@@ -451,9 +448,8 @@ def pick_wohnort(
     if school_ort_id is None:
         return RAND.choice(all_ort_ids)
 
-    other_ids = [oid for oid in all_ort_ids if oid != school_ort_id]
-    if other_ids and RAND.random() >= 0.80:
-        return RAND.choice(other_ids)
+    if other_ort_ids and RAND.random() >= 0.80:
+        return RAND.choice(other_ort_ids)
     return school_ort_id
 
 
@@ -494,14 +490,17 @@ def build_payload_entry(
     ort_name_to_ids: Dict[str, List[int]],
     school_ort_id: Optional[int],
     all_ort_ids: List[int],
+    other_ort_ids: List[int],
     streets_by_locality_postal: Dict[Tuple[str, str], List[str]],
     streets_by_postal: Dict[str, List[str]],
     streets_by_city: Dict[str, List[str]],
+    fallback_city_streets: List[str],
     deu_code: Optional[str],
     other_nat_codes: List[str],
     haltestellen_ids: List[int],
     fahrschuelerarten_ids: List[int],
     use_openplz_streets: bool,
+    openplz_session: Optional[requests.Session],
     openplz_cache: Dict[Tuple[str, str], Tuple[List[str], str]],
     openplz_budget_state: Dict[str, int],
     street_source_stats: Dict[str, int],
@@ -514,7 +513,7 @@ def build_payload_entry(
     if not isinstance(schueler_id, int):
         return None
 
-    wohnort_id = pick_wohnort(school_ort_id, all_ort_ids)
+    wohnort_id = pick_wohnort(school_ort_id, all_ort_ids, other_ort_ids)
     wohnort_name = ort_id_to_name.get(wohnort_id or -1, '')
     wohnort_postal = ort_id_to_postal.get(wohnort_id or -1)
 
@@ -547,6 +546,7 @@ def build_payload_entry(
             postal_code=wohnort_postal,
             cache=openplz_cache,
             budget_state=openplz_budget_state,
+            session=openplz_session,
         )
         openplz_mode_stats[openplz_mode] = openplz_mode_stats.get(openplz_mode, 0) + 1
 
@@ -566,6 +566,7 @@ def build_payload_entry(
                     postal_code=candidate_postal,
                     cache=openplz_cache,
                     budget_state=openplz_budget_state,
+                    session=openplz_session,
                 )
                 openplz_mode_stats[candidate_mode] = openplz_mode_stats.get(candidate_mode, 0) + 1
 
@@ -582,7 +583,7 @@ def build_payload_entry(
 
     # If we know a postal code, enforce postal-compatible street selection
     # and avoid broad city-only fallback from Strassen.csv.
-    if woonort_postal_and_has_street := bool(wohnort_postal and city_streets):
+    if wohnort_postal and city_streets:
         selected_street = RAND.choice(city_streets)
         if openplz_mode != 'not_used':
             street_source_stats['openplz'] = street_source_stats.get('openplz', 0) + 1
@@ -613,8 +614,7 @@ def build_payload_entry(
 
         if not city_streets:
             # fallback: any city streets
-            all_streets = [s for streets in streets_by_city.values() for s in streets]
-            city_streets = all_streets if all_streets else ['Hauptstraße']
+            city_streets = fallback_city_streets
 
         selected_street = RAND.choice(city_streets)
         street_source_stats['csv_fallback'] = street_source_stats.get('csv_fallback', 0) + 1
@@ -717,18 +717,21 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
 
     db = config['database']
     auth = HTTPBasicAuth(db['username'], db['password'])
+    base_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+    api_session = create_api_session(auth)
 
     try:
-        stammdaten = fetch_stammdaten(config)
-        orte = fetch_orte(config)
-        nationalitaeten = fetch_nationalitaeten(config)
+        stammdaten = fetch_stammdaten(base_url, api_session)
+        orte = fetch_orte(base_url, api_session)
+        nationalitaeten = fetch_nationalitaeten(base_url, api_session)
     except Exception as e:
         print(f'❌ Fehler beim Laden von Stammdaten/Katalogen: {e}')
+        close_session(api_session)
         return 0, 1
 
-    haltestellen = fetch_haltestellen(config)
+    haltestellen = fetch_haltestellen(base_url, api_session)
     haltestellen_ids = [hid for h in haltestellen for hid in [extract_id(h)] if hid is not None]
-    fahrschuelerarten = fetch_fahrschuelerarten(config)
+    fahrschuelerarten = fetch_fahrschuelerarten(base_url, api_session)
     fahrschuelerarten_ids = [fid for f in fahrschuelerarten for fid in [extract_id(f)] if fid is not None]
 
     ort_id_to_name = {
@@ -759,6 +762,7 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
         others = [oid for oid in all_ort_ids if oid != school_ort_id]
         sampled_others = RAND.sample(others, min(80, len(others)))
         sampled_ort_ids = [school_ort_id] + sampled_others
+    other_sampled_ort_ids = [oid for oid in sampled_ort_ids if oid != school_ort_id]
 
     required_pairs = {
         (ort_id_to_name[oid].casefold(), ort_id_to_postal[oid])
@@ -774,8 +778,12 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     streets_by_locality_postal = load_streets_by_locality_postal(required_pairs=required_pairs)
     streets_by_postal = load_streets_by_postal(required_postals=required_postals)
     streets_by_city = load_streets_by_city()
+    fallback_city_streets = [street for streets in streets_by_city.values() for street in streets]
+    if not fallback_city_streets:
+        fallback_city_streets = ['Hauptstraße']
     deu_code, other_nat_codes = split_nationalitaeten(nationalitaeten)
     use_openplz_streets = bool(db.get('useOpenPlzStreetLookup', True))
+    openplz_session = create_openplz_session() if use_openplz_streets else None
     openplz_cache: Dict[Tuple[str, str], Tuple[List[str], str]] = {}
     openplz_budget_state = {
         'used': 0,
@@ -811,14 +819,17 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
             ort_name_to_ids,
             school_ort_id,
             sampled_ort_ids,
+            other_sampled_ort_ids,
             streets_by_locality_postal,
             streets_by_postal,
             streets_by_city,
+            fallback_city_streets,
             deu_code,
             other_nat_codes,
             haltestellen_ids,
             fahrschuelerarten_ids,
             use_openplz_streets,
+            openplz_session,
             openplz_cache,
             openplz_budget_state,
             street_source_stats,
@@ -863,9 +874,11 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
 
     if not payload_all:
         print('❌ Keine gültigen Schülerdaten zum Patchen gefunden.')
+        close_session(openplz_session)
+        close_session(api_session)
         return 0, 1
 
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/stammdaten"
+    url = f'{base_url}/schueler/stammdaten'
 
     patched = 0
     failed = 0
@@ -876,12 +889,10 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
 
     for idx, batch in enumerate(batches, start=1):
         try:
-            resp = requests.patch(
+            resp = api_session.patch(
                 url,
                 json=batch,
-                auth=auth,
-                verify=False,
-                timeout=60,
+                timeout=PATCH_TIMEOUT,
             )
             if resp.status_code in (200, 201, 204):
                 patched += len(batch)
@@ -903,6 +914,8 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     else:
         print(f'⚠️  {failed} Schüler konnten nicht gepatcht werden')
 
+    close_session(openplz_session)
+    close_session(api_session)
     return patched, failed
 
 
