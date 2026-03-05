@@ -21,6 +21,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 RAND = random.Random()
 TARGET_JAHRGAENGE = {'05', '06', '07', '08', '09', '10', 'EF', 'Q1', 'Q2'}
+KINDERGARTEN_JAHRGAENGE = {'01', '02', '03', '04'}
 SCHULBESUCH_PATCH_KEY = 'idVorherigeSchule'
 VORIGE_ENTLASSGRUND_ID = 4
 VORIGE_ART_LETZTE_VERSETZUNG = '11101'
@@ -162,6 +163,35 @@ def fetch_grundschulen(config, auth: HTTPBasicAuth) -> List[int]:
     return unique_ids
 
 
+def fetch_kindergaerten(config, auth: HTTPBasicAuth) -> List[int]:
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/kindergaerten"
+    try:
+        resp = requests.get(url, auth=auth, verify=False, timeout=20)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        print(f"⚠️  Kindergärten konnten nicht geladen werden: {exc}")
+        return []
+
+    ids: List[int] = []
+    for entry in resp.json():
+        if not isinstance(entry, dict):
+            continue
+        kid = extract_id(entry)
+        if kid is not None:
+            ids.append(kid)
+
+    unique_ids: List[int] = []
+    seen = set()
+    for kid in ids:
+        if kid in seen:
+            continue
+        seen.add(kid)
+        unique_ids.append(kid)
+
+    return unique_ids
+
+
 def fetch_schulbesuch(config, auth: HTTPBasicAuth, schueler_id: int) -> dict:
     db = config['database']
     url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/schulbesuch"
@@ -238,6 +268,22 @@ def patch_schulbesuch(
     return requests.patch(url, json=payload, auth=auth, verify=False, timeout=20)
 
 
+def patch_kindergarten(
+    config,
+    auth: HTTPBasicAuth,
+    schueler_id: int,
+    kindergarten_id: int,
+    dauerbesuch_id: int,
+) -> requests.Response:
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schueler/{schueler_id}/schulbesuch"
+    payload = {
+        'idKindergarten': kindergarten_id,
+        'idDauerKindergartenbesuch': dauerbesuch_id,
+    }
+    return requests.patch(url, json=payload, auth=auth, verify=False, timeout=20)
+
+
 def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
     print('\nLade Schüler aus Cache...')
     schueler_list = load_cache()
@@ -275,10 +321,19 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
         print('❌ Keine Grundschulen im Katalog gefunden.')
         return 0, 0, len(schueler_list)
 
+    print('Lade Kindergärten...')
+    try:
+        kindergaerten_ids = fetch_kindergaerten(config, auth)
+    except requests.exceptions.RequestException as exc:
+        print(f"⚠️  Kindergärten-API-Fehler: {exc}")
+        kindergaerten_ids = []
+
     total = len(schueler_list)
     print(f'Gefunden: {total} Schüler im Cache')
     print(f'Verfügbare Grundschulen: {len(grundschulen_ids)}')
-    print('Zieljahrgänge: 05, 06, 07, 08, 09, 10, EF, Q1, Q2')
+    print(f'Verfügbare Kindergärten: {len(kindergaerten_ids)}')
+    print('Zieljahrgänge (Grundschule): 05, 06, 07, 08, 09, 10, EF, Q1, Q2')
+    print('Zieljahrgänge (Kindergarten): 01, 02, 03, 04')
 
     patched = 0
     skipped = 0
@@ -295,6 +350,45 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
             continue
 
         jahrgang_kuerzel = resolve_jahrgang_kuerzel(schueler, jahrgang_id_to_kuerzel)
+
+        # Handle Kindergarten for grades 01-04
+        if jahrgang_kuerzel in KINDERGARTEN_JAHRGAENGE:
+            if not kindergaerten_ids:
+                skipped += 1
+                print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Keine Kindergärten verfügbar")
+                continue
+
+            try:
+                kindergarten_id = RAND.choice(kindergaerten_ids)
+                dauerbesuch_id = RAND.choice([4, 5])
+
+                patch_resp = patch_kindergarten(
+                    config,
+                    auth,
+                    schueler_id,
+                    kindergarten_id,
+                    dauerbesuch_id,
+                )
+
+                if patch_resp.status_code in (200, 201, 204):
+                    patched += 1
+                    print(
+                        f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
+                        f"✓ Kindergarten {kindergarten_id}, Besuchsdauer {dauerbesuch_id}"
+                    )
+                else:
+                    failed += 1
+                    error_text = patch_resp.text[:180].replace('\n', ' ')
+                    print(
+                        f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): "
+                        f"✗ PATCH fehlgeschlagen (HTTP {patch_resp.status_code}) - {error_text}"
+                    )
+            except requests.exceptions.RequestException as exc:
+                failed += 1
+                print(f"[{idx}/{total}] {vorname} {nachname} ({jahrgang_kuerzel}): ✗ Request-Fehler: {exc}")
+            continue
+
+        # Handle Grundschule for grades 05-Q2
         if jahrgang_kuerzel not in TARGET_JAHRGAENGE:
             skipped += 1
             print(f"[{idx}/{total}] {vorname} {nachname}: ↷ Jahrgang {jahrgang_kuerzel or '-'} nicht im Zielbereich")
