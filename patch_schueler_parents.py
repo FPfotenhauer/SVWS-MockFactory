@@ -246,7 +246,6 @@ def patch_schuler_parents(config):
         print('⚠️  Keine Schüler im Cache gefunden.')
         return 0, 0, 0
 
-    nachnamen = load_nachnamen()
     vornamen_w = load_vornamen_w()
     vornamen_m = load_vornamen_m()
 
@@ -286,6 +285,7 @@ def patch_schuler_parents(config):
         schueler_id = extract_id(schueler)
         s_vorname = schueler.get('vorname', '')
         s_nachname = schueler.get('nachname', '')
+        schueler_nachname = s_nachname.strip() if isinstance(s_nachname, str) else ''
 
         if schueler_id is None:
             return 0, 0, 0, 0, 1, f"[{idx}/{total}] {s_vorname} {s_nachname}: ⚠️  Keine ID im Cache"
@@ -319,7 +319,13 @@ def patch_schuler_parents(config):
         primary_nachname: Optional[str] = None
         if primary_id is None:
             vorname = rng.choice(vornamen_w)
-            nachname = rng.choice(nachnamen)
+            nachname = schueler_nachname
+            if not nachname:
+                value = (student_stammdaten or {}).get('nachname')
+                if isinstance(value, str) and value.strip():
+                    nachname = value.strip()
+                else:
+                    nachname = 'Unbekannt'
             primary_nachname = nachname
             payload = build_payload(vorname, nachname, erzieherart_id, student_stammdaten or {}, rng)
             url = f'{base_url}/schueler/erzieher/new/{schueler_id}/{endpoint_erzieherart_id}'
@@ -354,7 +360,9 @@ def patch_schuler_parents(config):
             second_status = '✗'
         else:
             vorname2 = rng.choice(vornamen_m)
-            nachname2 = primary_nachname or rng.choice(nachnamen)
+            nachname2 = schueler_nachname
+            if not nachname2:
+                nachname2 = primary_nachname or 'Unbekannt'
             payload2 = build_second_payload(vorname2, nachname2, erzieherart_id, student_stammdaten or {}, rng)
             url2 = f'{base_url}/erzieher/{primary_id}/stammdaten/2'
 
