@@ -102,7 +102,6 @@ def populate_floskeln(config):
             'idFloskelgruppe': id_floskelgruppe,
             'idFach': None,  # Will be parsed if present
             'niveau': 1,  # Default niveau
-            'istSichtbar': True,
             'sortierung': idx,
             'idsJahrgaenge': jahrgaenge,
         }

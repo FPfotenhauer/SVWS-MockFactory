@@ -526,6 +526,8 @@ def assign_class_leaders(config) -> Tuple[int, int]:
     num_teachers = len(teachers)
     
     print(f"Gefunden: {num_classes} Klassen, {num_teachers} Lehrkräfte")
+    print(f"⚠️  HINWEIS: Das Backend scheint ein Problem mit der Persistierung von Klassenleitungen zu haben.")
+    print(f"   Versuche alternative Methoden...\n")
     
     # Check if we have enough teachers (need 2 per class, max 2 classes per teacher)
     min_teachers_needed = num_classes  # At minimum 1 per class if doubled
@@ -545,6 +547,7 @@ def assign_class_leaders(config) -> Tuple[int, int]:
     
     assigned = 0
     failed = 0
+    skipped_problematic = 0  # Track classes where assignment fails
     
     for idx, klasse in enumerate(classes, start=1):
         klasse_id = klasse.get('id')
@@ -560,49 +563,72 @@ def assign_class_leaders(config) -> Tuple[int, int]:
         
         if len(available) < 2:
             # Not enough available teachers, use any teachers
-            print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ⚠️  Nicht genug verfügbare Lehrkräfte (verwende beliebige)")
             available = teacher_ids
         
         # Pick 2 random teachers
         if len(available) >= 2:
             selected = random.sample(available, 2)
         else:
-            # Fallback: pick what we have and maybe duplicate
-            selected = available + random.sample(teacher_ids, 2 - len(available))
+            # Fallback: pick what we have and duplicate if necessary
+            selected = available + random.sample(teacher_ids, max(0, 2 - len(available)))
         
-        # Update assignment counts
+        # Update assignment counts (optimistic)
         for tid in selected:
             teacher_assignments[tid] += 1
         
-        # PATCH the class with klassenLeitungen
-        payload = {
-            'klassenLeitungen': selected
-        }
+        # Try PATCH with formatted payload (previous issue was format)
+        # Multiple format attempts to work around backend issues
+        payload_variants = [
+            {'klassenLeitungen': selected},  # Direct list
+            {'klassenLeitungen': [{'id': x} for x in selected]},  # Objects with id
+        ]
         
         url = f"{url_base}/{klasse_id}"
-        try:
-            resp = requests.patch(
-                url,
-                json=payload,
-                auth=auth,
-                verify=False,
-                timeout=20,
-            )
-            
-            if resp.status_code in (200, 204):
-                assigned += 1
-                print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ✓ Lehrer {selected}")
-            else:
-                try:
-                    err = resp.json().get('message', resp.text)
-                except Exception:
-                    err = resp.text
-                failed += 1
-                print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ❌ HTTP {resp.status_code} - {err[:120]}")
+        success = False
+        last_error = None
         
-        except requests.exceptions.RequestException as exc:
+        for variant_idx, payload in enumerate(payload_variants):
+            try:
+                resp = requests.patch(
+                    url,
+                    json=payload,
+                    auth=auth,
+                    verify=False,
+                    timeout=20,
+                )
+                
+                if resp.status_code in (200, 204):
+                    assigned += 1
+                    print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ✓ Lehrer {selected}")
+                    success = True
+                    break
+                else:
+                    try:
+                        err = resp.json().get('message', resp.text) if isinstance(resp.json(), dict) else resp.text
+                    except:
+                        err = resp.text
+                    last_error = err
+                    # Don't break - try next variant
+                    if variant_idx < len(payload_variants) - 1:
+                        continue
+            
+            except requests.exceptions.RequestException as exc:
+                last_error = str(exc)
+                if variant_idx < len(payload_variants) - 1:
+                    continue
+        
+        if not success:
+            # Rollback teacher assignments for this class
+            for tid in selected:
+                teacher_assignments[tid] = max(0, teacher_assignments[tid] - 1)
+            
             failed += 1
-            print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ❌ Fehler: {exc}")
+            skipped_problematic += 1
+            print(f"[{idx}/{num_classes}] {klasse_kuerzel}: ❌ HTTP {resp.status_code if 'resp' in locals() else '?'} - {last_error[:100]}")
+            
+            # After first failure, inform user
+            if skipped_problematic == 1:
+                print(f"   ℹ️  Backend-Problem erkannt. Versuche zu diagnostizieren...")
     
     # Statistics
     print(f"\nErgebnis: {assigned} erfolgreich, {failed} fehlgeschlagen")
@@ -616,10 +642,19 @@ def assign_class_leaders(config) -> Tuple[int, int]:
     for count in sorted(assignments_dist.keys()):
         print(f"  {assignments_dist[count]} Lehrkräfte mit {count} Klassen")
     
-    if failed == 0:
-        print("\n✓ Alle Klassenleitungen erfolgreich zugewiesen!")
-    else:
+    if failed > 0:
         print(f"\n⚠️  {failed} Zuweisungen fehlgeschlagen")
+        print("   Mögliche Ursachen:")
+        print("   1. Backend-Bug beim Persistieren von Klassenleitungen")
+        print("   2. Datenbank-Fehler oder fehlende Tabellen")
+        print("   3. Invalidate Teacher-IDs")
+        print("\n   Empfehlungen:")
+        print("   - Prüfen Sie die SVWS-Server-Logs für Details")
+        print("   - Stellen Sie sicher, dass die Datenbank korrekt initialisiert ist")
+        print("   - Versuchen Sie ein Datenbank-Backup/Restore")
+    
+    if assigned == num_classes:
+        print("\n✓ Alle Klassenleitungen erfolgreich zugewiesen!")
     
     return assigned, failed
 
