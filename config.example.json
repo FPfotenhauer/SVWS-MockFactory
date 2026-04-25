@@ -15,7 +15,7 @@
     "anzahlschueler": 1200,
     "anzahlbetriebe": 50,
     "schuelerDiversGeschlechtCode": 5,
-    "language_workers": 4,
+    "language_workers": 1,
     "telefon_workers": 1,
     "misc_workers": 1,
     "parents_workers": 1,

@@ -23,6 +23,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 REQUEST_TIMEOUT = 20
 RETRY_BACKOFF_SECONDS = 0.2
 DEFAULT_LANGUAGE_WORKERS = '4'
+POST_RETRIES = 1
 _THREAD_LOCAL = threading.local()
 _THREAD_SESSIONS: List[requests.Session] = []
 _THREAD_SESSIONS_LOCK = threading.Lock()
@@ -221,6 +222,10 @@ def patch_schuler_language(config) -> Tuple[int, int, int]:
     except Exception:
         workers = 4
 
+    if 'language_workers' not in db and 'SVWS_LANGUAGE_WORKERS' not in os.environ:
+        # Default to serial create calls to reduce duplicate key races on some server builds.
+        workers = 1
+
     total = len(schueler_list)
     created = 0
     skipped = 0
@@ -284,6 +289,7 @@ def patch_schuler_language(config) -> Tuple[int, int, int]:
                 url,
                 payload=payload,
                 success_codes=(200, 201, 409),
+                retries=POST_RETRIES,
             )
 
             if resp is None:

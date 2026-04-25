@@ -86,6 +86,7 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
     "anzahlschueler": 1200,
     "anzahlbetriebe": 150,
 
+  "language_workers": 1,
     "telefon_workers": 1,
     "misc_workers": 1,
     "parents_workers": 1,
@@ -115,6 +116,7 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 - **anzahlbetriebe**: Anzahl zu generierender Betriebe (Standard: 150)
 
 Zusätzliche optionale Tuning-Parameter:
+- **language_workers**: Parallelität für `--patch-schueler-language` (Default intern: 1 bei fehlender Konfiguration)
 - **telefon_workers**: Parallelität für `--patch-schueler-telefon` (Default intern: 1 bei fehlender Konfiguration)
 - **misc_workers**: Parallelität für `--patch-schueler-misc` (Default intern: 1 bei fehlender Konfiguration)
 - **parents_workers**: Parallelität für `--patch-schueler-parents` (Default intern: 1 bei fehlender Konfiguration)
@@ -197,6 +199,10 @@ python mockfactory.py --patch-schueler-language
 
 API-Endpunkt dafür:
 - `POST /db/{schema}/schueler/{id}/sprachen/belegungen` (2 Einträge pro Schüler in Zieljahrgängen)
+
+Hinweis zur Stabilität:
+- Die Sprachbelegungs-Erzeugung läuft standardmäßig seriell (1 Worker) und ohne Retry beim `POST /schueler/{id}/sprachen/belegungen`, um Duplicate-Key-Races auf einigen Serverständen zu vermeiden.
+- Optional kann die Parallelität explizit über `database.language_workers` oder `SVWS_LANGUAGE_WORKERS` erhöht werden.
 
 Einzeln ausführbar:
 
