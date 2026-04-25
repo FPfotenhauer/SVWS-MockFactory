@@ -92,11 +92,8 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
     "parents_workers": 1,
     "company_workers": 1,
 
-    "company_assignment_endpoint": "/schueler/schueler-betriebe/create",
-    "company_assignment_endpoints": [
-      "/schueler/schueler-betriebe/create",
-      "/betriebe/schuelerbetrieb/new/schueler/{schueler_id}/betrieb/{betrieb_id}"
-    ]
+    "useOpenPlzStreetLookup": true,
+    "openPlzRequestLimit": 150
   }
 }
 ```
