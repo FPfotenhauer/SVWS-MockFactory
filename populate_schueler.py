@@ -233,6 +233,57 @@ def load_classes_from_cache(cache_file: Path, yeargroup_id_by_kuerzel: Dict[str,
     return result
 
 
+def load_classes(config, id_schuljahresabschnitt: int, yeargroup_id_by_kuerzel: Dict[str, int]) -> List[dict]:
+    cache_file = Path(__file__).parent / '.klassen_cache.json'
+    cached_classes = load_classes_from_cache(cache_file, yeargroup_id_by_kuerzel)
+    if cached_classes:
+        print(f"ℹ️  Verwende {len(cached_classes)} Klassen aus .klassen_cache.json")
+        return cached_classes
+
+    classes: List[dict] = []
+    try:
+        classes_all = fetch_classes(config, id_schuljahresabschnitt=id_schuljahresabschnitt)
+        for k in classes_all:
+            k_abschnitt = k.get('idSchuljahresabschnitt')
+            if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
+                class_id = k.get('id')
+                jg_id = extract_class_yeargroup_id(k)
+                if class_id and jg_id:
+                    classes.append(
+                        {
+                            'id': class_id,
+                            'kuerzel': k.get('kuerzel', str(class_id)),
+                            'idJahrgang': jg_id,
+                        }
+                    )
+    except Exception as e:
+        print(f"⚠️  Fehler beim Laden der Klassen per Abschnitts-API: {e}")
+        print('   Versuche Fallback über /klassen ...')
+        try:
+            classes_all = fetch_classes(config)
+            for k in classes_all:
+                k_abschnitt = k.get('idSchuljahresabschnitt')
+                if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
+                    class_id = k.get('id')
+                    jg_id = extract_class_yeargroup_id(k)
+                    if class_id and jg_id:
+                        classes.append(
+                            {
+                                'id': class_id,
+                                'kuerzel': k.get('kuerzel', str(class_id)),
+                                'idJahrgang': jg_id,
+                            }
+                        )
+        except Exception as e2:
+            print(f"⚠️  Fehler beim Laden der Klassen per /klassen: {e2}")
+        print('   Versuche Fallback über .klassen_cache.json ...')
+        classes = load_classes_from_cache(cache_file, yeargroup_id_by_kuerzel)
+        if classes:
+            print(f"✓ Fallback erfolgreich: {len(classes)} Klassen aus Cache geladen")
+
+    return classes
+
+
 def numeric_from_text(value: str) -> Optional[int]:
     digits = ''.join(ch for ch in value if ch.isdigit())
     if not digits:
@@ -444,47 +495,7 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
             'other': [],
         }
 
-    classes = []
-    try:
-        classes_all = fetch_classes(config, id_schuljahresabschnitt=id_schuljahresabschnitt)
-        for k in classes_all:
-            k_abschnitt = k.get('idSchuljahresabschnitt')
-            if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
-                class_id = k.get('id')
-                jg_id = extract_class_yeargroup_id(k)
-                if class_id and jg_id:
-                    classes.append(
-                        {
-                            'id': class_id,
-                            'kuerzel': k.get('kuerzel', str(class_id)),
-                            'idJahrgang': jg_id,
-                        }
-                    )
-    except Exception as e:
-        print(f"⚠️  Fehler beim Laden der Klassen per Abschnitts-API: {e}")
-        print('   Versuche Fallback über /klassen ...')
-        try:
-            classes_all = fetch_classes(config)
-            for k in classes_all:
-                k_abschnitt = k.get('idSchuljahresabschnitt')
-                if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
-                    class_id = k.get('id')
-                    jg_id = extract_class_yeargroup_id(k)
-                    if class_id and jg_id:
-                        classes.append(
-                            {
-                                'id': class_id,
-                                'kuerzel': k.get('kuerzel', str(class_id)),
-                                'idJahrgang': jg_id,
-                            }
-                        )
-        except Exception as e2:
-            print(f"⚠️  Fehler beim Laden der Klassen per /klassen: {e2}")
-        print('   Versuche Fallback über .klassen_cache.json ...')
-        cache_file = Path(__file__).parent / '.klassen_cache.json'
-        classes = load_classes_from_cache(cache_file, yeargroup_id_by_kuerzel)
-        if classes:
-            print(f"✓ Fallback erfolgreich: {len(classes)} Klassen aus Cache geladen")
+    classes = load_classes(config, id_schuljahresabschnitt, yeargroup_id_by_kuerzel)
 
     if not classes:
         print('❌ Keine Klassen gefunden. Bitte zuerst populate_classes.py ausführen.')

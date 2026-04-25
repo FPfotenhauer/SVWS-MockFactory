@@ -266,6 +266,11 @@ def patch_schuler_parents(config):
         workers = max(1, min(16, int(workers_raw)))
     except Exception:
         workers = 4
+
+    if 'parents_workers' not in db and 'SVWS_PARENTS_WORKERS' not in os.environ:
+        # Default to serial create calls to reduce duplicate key races on some server builds.
+        workers = 1
+
     print(f'Parallelität: {workers} Worker')
 
     created_first = 0
@@ -330,7 +335,14 @@ def patch_schuler_parents(config):
             payload = build_payload(vorname, nachname, erzieherart_id, student_stammdaten or {}, rng)
             url = f'{base_url}/schueler/erzieher/new/{schueler_id}/{endpoint_erzieherart_id}'
 
-            resp = request_with_retry(session, 'POST', url, payload=payload, success_codes=(200, 201))
+            resp = request_with_retry(
+                session,
+                'POST',
+                url,
+                payload=payload,
+                success_codes=(200, 201),
+                retries=1,
+            )
             if resp is not None and resp.status_code in (200, 201):
                 local_created_first += 1
                 first_status = '✓'

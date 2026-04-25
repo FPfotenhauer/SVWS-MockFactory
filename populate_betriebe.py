@@ -18,6 +18,23 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 RAND = random.Random()
 
 
+def extract_id(value):
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def extract_betrieb_id_from_response(data):
+    if isinstance(data, dict):
+        for key in ('id', 'ID', 'idBetrieb', 'betrieb_id'):
+            betriebs_id = extract_id(data.get(key))
+            if betriebs_id is not None:
+                return betriebs_id
+    return None
+
+
 def load_nachnamen():
     """Load last names from katalogdaten/nachnamen.json."""
     path = Path(__file__).parent / 'katalogdaten' / 'nachnamen.json'
@@ -142,6 +159,7 @@ def populate_betriebe(config, count=150):
 
     created = 0
     failed = 0
+    created_betrieb_ids = []
 
     for idx in range(1, count + 1):
         name = random_name(nachnamen)
@@ -184,11 +202,12 @@ def populate_betriebe(config, count=150):
                 created += 1
                 try:
                     data = response.json()
-                    betriebs_id = data.get('id') or data.get('ID')
+                    betriebs_id = extract_betrieb_id_from_response(data)
                 except Exception:
                     betriebs_id = None
 
                 if betriebs_id:
+                    created_betrieb_ids.append(betriebs_id)
                     contacts = [
                         ('Herr', RAND.choice(vornamen_m)),
                         ('Frau', RAND.choice(vornamen_w)),
@@ -240,6 +259,13 @@ def populate_betriebe(config, count=150):
         print("✓ Alle Betriebe erfolgreich erstellt!")
     else:
         print(f"⚠️  {failed} Betriebe konnten nicht erstellt werden")
+
+    if created_betrieb_ids:
+        cache_file = Path(__file__).parent / '.betriebe_cache.json'
+        unique_ids = list(dict.fromkeys(created_betrieb_ids))
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump([{'id': bid} for bid in unique_ids], f, indent=2, ensure_ascii=False)
+        print(f"💾 {len(unique_ids)} Betriebe im Cache gespeichert ({cache_file.name})")
 
     return created, failed
 

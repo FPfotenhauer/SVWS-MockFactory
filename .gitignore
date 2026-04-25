@@ -3,6 +3,7 @@ config.json
 .lehrer_cache.json
 .klassen_cache.json
 .schueler_cache.json
+.betriebe_cache.json
 schulen.json
 
 # Byte-compiled / optimized / DLL files

@@ -185,6 +185,10 @@ python mockfactory.py --patch-schueler-telefon
 
 API-Endpunkt dafür: `POST /db/{schema}/schueler/{id}/telefon` (zweimal pro Schüler, je Telefonnummer ein Request).
 
+Hinweis zur Stabilität:
+- Die Telefon-Erzeugung läuft standardmäßig seriell (1 Worker) und ohne Retry beim `POST /schueler/{id}/telefon`, um Duplicate-Key-Races auf einigen Serverständen zu vermeiden.
+- Optional kann die Parallelität explizit über `database.telefon_workers` oder `SVWS_TELEFON_WORKERS` erhöht werden.
+
 Einzeln ausführbar:
 
 ```bash
@@ -196,6 +200,10 @@ API-Endpunkte dafür:
 - `PATCH /db/{schema}/schueler/{id}/einwilligungen/{idEinwilligungsart}`
 - `PATCH /db/{schema}/schueler/{id}/lernplattformen/{idLernplattform}`
 
+Hinweis zur Stabilität:
+- Die Vermerk-Erzeugung läuft standardmäßig seriell (1 Worker) und ohne Retry beim `POST /schueler/vermerke`, um Duplicate-Key-Races auf einigen Serverständen zu vermeiden.
+- Optional kann die Parallelität explizit über `database.misc_workers` oder `SVWS_MISC_WORKERS` erhöht werden.
+
 Einzeln ausführbar:
 
 ```bash
@@ -206,6 +214,10 @@ API-Endpunkte dafür:
 - `POST /db/{schema}/schueler/erzieher/new/{idSchueler}/1` (1. Person anlegen)
 - `PATCH /db/{schema}/erzieher/{idErzieher}/stammdaten/2` (2. Person ergänzen)
 
+Hinweis zur Stabilität:
+- Die Erzieher-Erzeugung läuft standardmäßig seriell (1 Worker) und ohne Retry beim `POST /schueler/erzieher/new/...`, um Duplicate-Key-Races auf einigen Serverständen zu vermeiden.
+- Optional kann die Parallelität explizit über `database.parents_workers` oder `SVWS_PARENTS_WORKERS` erhöht werden.
+
 Einzeln ausführbar:
 
 ```bash
@@ -213,8 +225,19 @@ python mockfactory.py --patch-schueler-company
 ```
 
 API-Endpunkte dafür:
-- `GET /db/{schema}/betriebe` (Liste verfügbarer Betriebe)
-- `POST /db/{schema}/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}`
+- `GET /db/{schema}/schule/betriebe` (primär, Liste verfügbarer Betriebe)
+- `GET /db/{schema}/betriebe` (Fallback für ältere Serverstände)
+- `POST /db/{schema}/schueler/schueler-betriebe/create` (primär laut OpenAPI)
+- `POST /db/{schema}/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}` (historisch)
+- `POST /db/{schema}/schule/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}` (historischer Fallback-Kandidat)
+
+Hinweis zu unterschiedlichen Serverständen:
+- Der Zuordnungs-Schritt führt einen Endpunkt-Preflight aus und überspringt den Schritt sauber, wenn kein passender POST-Endpunkt gefunden wird.
+- Optional kann der Endpunkt in `config.json` erzwungen werden:
+  - `database.company_assignment_endpoint`: ein einzelnes Template, z. B. `/schule/betriebe/schuelerbetrieb/new/schueler/{schueler_id}/betrieb/{betrieb_id}`
+  - `database.company_assignment_endpoints`: Liste von Templates in Prioritätsreihenfolge
+- Für den Create-Endpunkt `/schueler/schueler-betriebe/create` läuft die Zuordnung standardmäßig seriell (1 Worker) und ohne Retry, um Duplicate-Key-Races auf einigen Serverständen zu vermeiden.
+- Optional kann die Parallelität explizit gesetzt werden über `database.company_workers` oder die Umgebungsvariable `SVWS_COMPANY_WORKERS`.
 
 ### Schulstammdaten patchen
 

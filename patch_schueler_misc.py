@@ -87,6 +87,10 @@ def request_with_retry(
     return None
 
 
+def is_vermerk_create_endpoint(url: str) -> bool:
+    return url.endswith('/schueler/vermerke')
+
+
 def load_cache() -> List[dict]:
     cache_file = Path(__file__).parent / '.schueler_cache.json'
     if not cache_file.exists():
@@ -217,6 +221,10 @@ def patch_schueler_misc(config):
     except Exception:
         workers = 6
 
+    if is_vermerk_create_endpoint(url) and 'misc_workers' not in db and 'SVWS_MISC_WORKERS' not in os.environ:
+        # Default to serial create calls to reduce duplicate key races on some server builds.
+        workers = 1
+
     print(f"\nErzeuge Vermerke für {total} Schüler...")
     print(f"Parallelität: {workers} Worker")
     print(f"URL: {url}\n")
@@ -247,7 +255,14 @@ def patch_schueler_misc(config):
         for _ in range(entries_per_student):
             payload = build_vermerk_payload(schueler_id, vermerkarten_ids)
 
-            resp = request_with_retry(session, 'POST', url, payload=payload, success_codes=(200, 201))
+            resp = request_with_retry(
+                session,
+                'POST',
+                url,
+                payload=payload,
+                success_codes=(200, 201),
+                retries=1,
+            )
             if resp is not None and resp.status_code in (200, 201):
                 local_created += 1
             else:

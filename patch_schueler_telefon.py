@@ -23,7 +23,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 REQUEST_TIMEOUT = 20
 DEFAULT_TELEFON_WORKERS = '4'
-POST_RETRIES = 3
+POST_RETRIES = 1
 RETRY_BACKOFF_SECONDS = 0.2
 _THREAD_LOCAL = threading.local()
 _THREAD_SESSIONS: List[requests.Session] = []
@@ -220,6 +220,10 @@ def patch_schuler_telefon(config):
         workers = max(1, min(16, int(workers_raw)))
     except Exception:
         workers = 6
+
+    if 'telefon_workers' not in db and 'SVWS_TELEFON_WORKERS' not in os.environ:
+        # Default to serial create calls to reduce duplicate key races on some server builds.
+        workers = 1
 
     print(f"\nErzeuge Telefon-Daten für {total} Schüler...")
     print(f"Parallelität: {workers} Worker")
