@@ -10,9 +10,23 @@
     "username": "Admin",
     "password": "",
     "schulnummer": 123456,
+    "test": false,
     "anzahllehrer": 100,
     "anzahlschueler": 1200,
-    "anzahlbetriebe": 50
+    "anzahlbetriebe": 50,
+    "schuelerDiversGeschlechtCode": 5,
+    "language_workers": 4,
+    "telefon_workers": 1,
+    "misc_workers": 1,
+    "parents_workers": 1,
+    "company_workers": 1,
+    "useOpenPlzStreetLookup": true,
+    "openPlzRequestLimit": 150,
+    "company_assignment_endpoint": "/schueler/schueler-betriebe/create",
+    "company_assignment_endpoints": [
+      "/schueler/schueler-betriebe/create",
+      "/betriebe/schuelerbetrieb/new/schueler/{schueler_id}/betrieb/{betrieb_id}"
+    ]
   },
   "schooldata": {
     "adresse": {

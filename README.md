@@ -74,15 +74,28 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
     "server": "your-server-hostname",
     "httpsport": 8443,
     "schema": "your-schema-name",
+    "mariadbroot": "your-mariadb-root-user",
+    "mariadbdbrootpassword": "your-mariadb-root-password",
     "dbusername": "your-db-username",
     "dbpassword": "your-db-password",
     "username": "your-admin-username",
     "password": "your-admin-password",
     "schulnummer": 123456,
+    "test": false,
     "anzahllehrer": 100,
     "anzahlschueler": 1200,
     "anzahlbetriebe": 150,
-    "test": false
+
+    "telefon_workers": 1,
+    "misc_workers": 1,
+    "parents_workers": 1,
+    "company_workers": 1,
+
+    "company_assignment_endpoint": "/schueler/schueler-betriebe/create",
+    "company_assignment_endpoints": [
+      "/schueler/schueler-betriebe/create",
+      "/betriebe/schuelerbetrieb/new/schueler/{schueler_id}/betrieb/{betrieb_id}"
+    ]
   }
 }
 ```
@@ -96,10 +109,18 @@ Die `config.json` enthält alle notwendigen Verbindungsdaten:
 - **dbusername/dbpassword**: Zugangsdaten für Datenbankoperationen (Server-Status)
 - **username/password**: Zugangsdaten für API-Operationen (Schema-Initialisierung)
 - **schulnummer**: Schulnummer für die Initialisierung
+- **test**: Flag für Testmodus bei Schulen-Befüllung (false: Schulen.csv, true: SchulenTest.csv)
 - **anzahllehrer**: Anzahl zu generierender Lehrkräfte (Standard: 100)
 - **anzahlschueler**: Anzahl zu generierender Schüler (für Klassenberechnung)
 - **anzahlbetriebe**: Anzahl zu generierender Betriebe (Standard: 150)
-- **test**: Flag für Testmodus bei Schulen-Befüllung (false: Schulen.csv, true: SchulenTest.csv)
+
+Zusätzliche optionale Tuning-Parameter:
+- **telefon_workers**: Parallelität für `--patch-schueler-telefon` (Default intern: 1 bei fehlender Konfiguration)
+- **misc_workers**: Parallelität für `--patch-schueler-misc` (Default intern: 1 bei fehlender Konfiguration)
+- **parents_workers**: Parallelität für `--patch-schueler-parents` (Default intern: 1 bei fehlender Konfiguration)
+- **company_workers**: Parallelität für `--patch-schueler-company` (Default intern: 1 für den Create-Endpunkt bei fehlender Konfiguration)
+- **company_assignment_endpoint**: Erzwingt einen einzelnen Endpoint-Template-Pfad für Schüler-Betriebszuordnung
+- **company_assignment_endpoints**: Priorisierte Liste von Endpoint-Template-Pfaden für den Endpunkt-Preflight
 
 ## Sicherheit
 
