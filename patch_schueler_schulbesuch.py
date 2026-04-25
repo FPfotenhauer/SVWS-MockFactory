@@ -30,7 +30,8 @@ VORIGE_ENTLASSGRUND_ID = 4
 VORIGE_ART_LETZTE_VERSETZUNG = '11101'
 GRUNDSCHULE_EINSCHULUNGSART_ID = 51
 ID_GRUNDSCHULE_JAHRE_EINGANGSPHASE = 2
-KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG = 'R/GY'
+ID_KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG_KEY = 'idKuerzelGrundschuleUebergangsempfehlung'
+DEFAULT_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG = 'R/GY'
 ALLOWED_SEK1_SCHULFORMEN = {'H', 'R', 'GY', 'GE', 'FW', 'S', 'SK', 'PS'}
 
 
@@ -212,6 +213,39 @@ def fetch_kindergaerten(base_url: str, session: requests.Session) -> List[int]:
     return unique_ids
 
 
+def fetch_uebergangsempfehlungen(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/schueler/allgemein/uebergangsempfehlung'
+    resp = session.get(url, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+
+    data = resp.json()
+    return data if isinstance(data, list) else []
+
+
+def resolve_uebergangsempfehlung_id(entries: List[dict], target_kuerzel: str) -> Optional[int]:
+    target = (target_kuerzel or '').strip().upper()
+    if not target:
+        return None
+
+    fallback_id: Optional[int] = None
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+
+        entry_id = extract_id(entry)
+        if entry_id is None:
+            continue
+
+        if fallback_id is None:
+            fallback_id = entry_id
+
+        kuerzel = entry.get('kuerzel')
+        if isinstance(kuerzel, str) and kuerzel.strip().upper() == target:
+            return entry_id
+
+    return fallback_id
+
+
 def fetch_schulbesuch(base_url: str, session: requests.Session, schueler_id: int) -> dict:
     url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
     resp = session.get(url, timeout=REQUEST_TIMEOUT)
@@ -266,6 +300,7 @@ def patch_schulbesuch(
     grundschule_einschulungsjahr: int,
     sek1_wechsel: int,
     sek1_erste_schulform: str,
+    id_uebergangsempfehlung: Optional[int],
 ) -> requests.Response:
     url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
     payload = {
@@ -276,10 +311,12 @@ def patch_schulbesuch(
         'grundschuleEinschulungsjahr': grundschule_einschulungsjahr,
         'grundschuleEinschulungsartID': GRUNDSCHULE_EINSCHULUNGSART_ID,
         'idGrundschuleJahreEingangsphase': ID_GRUNDSCHULE_JAHRE_EINGANGSPHASE,
-        'kuerzelGrundschuleUebergangsempfehlung': KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG,
         'sekIWechsel': sek1_wechsel,
         'sekIErsteSchulform': sek1_erste_schulform,
     }
+
+    if id_uebergangsempfehlung is not None:
+        payload[ID_KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG_KEY] = id_uebergangsempfehlung
 
     return session.patch(url, json=payload, timeout=REQUEST_TIMEOUT)
 
@@ -337,6 +374,20 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
         if not grundschulen_ids:
             print('❌ Keine Grundschulen im Katalog gefunden.')
             return 0, 0, len(schueler_list)
+
+        print('Lade Übergangsempfehlungen...')
+        try:
+            uebergangsempfehlungen = fetch_uebergangsempfehlungen(base_url, session)
+            id_uebergangsempfehlung = resolve_uebergangsempfehlung_id(
+                uebergangsempfehlungen,
+                DEFAULT_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG,
+            )
+        except requests.exceptions.RequestException as exc:
+            print(f"⚠️  Übergangsempfehlungen konnten nicht geladen werden: {exc}")
+            id_uebergangsempfehlung = None
+
+        if id_uebergangsempfehlung is None:
+            print('⚠️  Keine passende Übergangsempfehlung-ID gefunden; Feld wird im PATCH ausgelassen.')
 
         print('Lade Kindergärten...')
         try:
@@ -436,6 +487,7 @@ def patch_schueler_schulbesuch(config) -> Tuple[int, int, int]:
                     grundschule_einschulungsjahr,
                     sek1_wechsel,
                     sek1_erste_schulform,
+                    id_uebergangsempfehlung,
                 )
                 if patch_resp.status_code in (200, 201, 204):
                     patched += 1

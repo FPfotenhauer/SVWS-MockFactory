@@ -186,6 +186,7 @@ python mockfactory.py --patch-schueler-schulbesuch
 
 API-Endpunkte dafür:
 - `GET /db/{schema}/schule/schulen` (Katalog der Schulen, Filter auf Grundschulen)
+- `GET /db/{schema}/schueler/allgemein/uebergangsempfehlung` (Katalog für Übergangsempfehlung, ID-Mapping)
 - `GET /db/{schema}/schueler/{id}/schulbesuch`
 - `PATCH /db/{schema}/schueler/{id}/schulbesuch`
 
