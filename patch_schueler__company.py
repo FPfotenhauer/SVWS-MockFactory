@@ -2,7 +2,7 @@
 Assign one random Betrieb (company) to each existing student.
 
 Reads student IDs from .schueler_cache.json (created by populate_schueler.py),
-loads available Betriebe via GET /db/{schema}/schule/betriebe (fallback: /betriebe),
+loads available Betriebe via GET /db/{schema}/schule/betriebe (legacy fallback: /betriebe),
 and creates one assignment per student via:
 POST /db/{schema}/schueler/schueler-betriebe/create
 """
@@ -241,8 +241,8 @@ def fetch_betriebe(base_url: str, session: requests.Session) -> List[int]:
 
 def fetch_betriebe_with_fallback(base_url: str, session: requests.Session) -> List[int]:
     urls = [
-        f'{base_url}/betriebe',
         f'{base_url}/schule/betriebe',
+        f'{base_url}/betriebe',
     ]
     errors: List[str] = []
 
@@ -258,8 +258,8 @@ def fetch_betriebe_with_fallback(base_url: str, session: requests.Session) -> Li
                     ids.append(betriebs_id)
             unique_ids = list(dict.fromkeys(ids))
             if unique_ids:
-                if url.endswith('/schule/betriebe'):
-                    print('ℹ️  Betriebe über Fallback-Endpunkt /schule/betriebe geladen')
+                if url.endswith('/betriebe'):
+                    print('ℹ️  Betriebe über Legacy-Fallback-Endpunkt /betriebe geladen')
                 return unique_ids
             errors.append(f'{url}: keine IDs im Payload')
         except requests.exceptions.RequestException as exc:
