@@ -28,7 +28,7 @@
           {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
           {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -37,7 +37,7 @@
           {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -46,7 +46,7 @@
           {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -55,7 +55,8 @@
           {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "CH", "wochenstunden": 1, "text": "Chemie"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -198,7 +199,9 @@
       "bezeichnung": "Grundschule",
       "jahrgaenge": {
         "01": [
-          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "LE", "wochenstunden": 2, "text": "Lesen"},
+          {"schluessel": "SG", "wochenstunden": 2, "text": "Sprachgebrauch"},
+          {"schluessel": "RS", "wochenstunden": 2, "text": "Rechtschreibung"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 2, "text": "Englisch"},
           {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
@@ -207,7 +210,9 @@
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
         ],
         "02": [
-          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "LE", "wochenstunden": 2, "text": "Lesen"},
+          {"schluessel": "SG", "wochenstunden": 2, "text": "Sprachgebrauch"},
+          {"schluessel": "RS", "wochenstunden": 2, "text": "Rechtschreibung"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 2, "text": "Englisch"},
           {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
@@ -216,7 +221,9 @@
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
         ],
         "03": [
-          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "LE", "wochenstunden": 2, "text": "Lesen"},
+          {"schluessel": "SG", "wochenstunden": 2, "text": "Sprachgebrauch"},
+          {"schluessel": "RS", "wochenstunden": 2, "text": "Rechtschreibung"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
           {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
@@ -225,7 +232,9 @@
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
         ],
         "04": [
-          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "LE", "wochenstunden": 2, "text": "Lesen"},
+          {"schluessel": "SG", "wochenstunden": 2, "text": "Sprachgebrauch"},
+          {"schluessel": "RS", "wochenstunden": 2, "text": "Rechtschreibung"},
           {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
           {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
@@ -307,8 +316,6 @@
           {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
           {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
-          {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
-          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
           {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
@@ -319,8 +326,6 @@
           {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
           {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
-          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -330,8 +335,6 @@
           {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
           {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
-          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
-          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
           {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
           {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
@@ -341,7 +344,6 @@
           {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
           {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
           {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
-          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
           {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
           {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
           {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
@@ -364,6 +366,8 @@
           {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
           {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
           {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
           {"schluessel": "SP", "wochenstunden": 2, "text": "Sport"}
         ]
       }
