@@ -1,0 +1,372 @@
+{
+  "version": "1.0",
+  "schulformen": {
+    "H": {
+      "bezeichnung": "Hauptschule",
+      "jahrgaenge": {
+        "05": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "EK", "wochenstunden": 1, "text": "Erdkunde/Geographie"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "06": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "CH", "wochenstunden": 1, "text": "Chemie"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "07": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "08": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "09": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "10": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ]
+      }
+    },
+    "R": {
+      "bezeichnung": "Realschule",
+      "jahrgaenge": {
+        "05": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "EK", "wochenstunden": 1, "text": "Erdkunde/Geographie"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "06": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "CH", "wochenstunden": 1, "text": "Chemie"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "07": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "08": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "09": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "10": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 3, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "SP", "wochenstunden": 2, "text": "Sport"}
+        ]
+      }
+    },
+    "GE": {
+      "bezeichnung": "Gesamtschule",
+      "jahrgaenge": {
+        "05": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "06": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "07": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 3, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "08": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 3, "text": "Gesellschaftslehre"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "09": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "10": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 3, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "SP", "wochenstunden": 2, "text": "Sport"}
+        ]
+      }
+    },
+    "G": {
+      "bezeichnung": "Grundschule",
+      "jahrgaenge": {
+        "01": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 2, "text": "Englisch"},
+          {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "02": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 2, "text": "Englisch"},
+          {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "03": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "04": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "SU", "wochenstunden": 6, "text": "Sachunterricht"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ]
+      }
+    },
+    "SK": {
+      "bezeichnung": "Sekundarschule",
+      "jahrgaenge": {
+        "05": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "06": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 2, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "07": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 3, "text": "Gesellschaftslehre"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "KU", "wochenstunden": 2, "text": "Kunst"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "08": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 5, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GL", "wochenstunden": 3, "text": "Gesellschaftslehre"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "09": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "10": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 3, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
+          {"schluessel": "SP", "wochenstunden": 2, "text": "Sport"}
+        ]
+      }
+    },
+    "GY": {
+      "bezeichnung": "Gymnasium",
+      "jahrgaenge": {
+        "05": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "06": [
+          {"schluessel": "D", "wochenstunden": 5, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 4, "text": "Englisch"},
+          {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "07": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "NA", "wochenstunden": 3, "text": "Naturwissenschaften"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "MU", "wochenstunden": 1, "text": "Musik"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "08": [
+          {"schluessel": "D", "wochenstunden": 4, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "L", "wochenstunden": 4, "text": "Latein"},
+          {"schluessel": "GL", "wochenstunden": 2, "text": "Gesellschaftslehre"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "KU", "wochenstunden": 1, "text": "Kunst"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "09": [
+          {"schluessel": "D", "wochenstunden": 3, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "BI", "wochenstunden": 2, "text": "Biologie"},
+          {"schluessel": "CH", "wochenstunden": 2, "text": "Chemie"},
+          {"schluessel": "SP", "wochenstunden": 3, "text": "Sport"}
+        ],
+        "10": [
+          {"schluessel": "D", "wochenstunden": 3, "text": "Deutsch"},
+          {"schluessel": "M", "wochenstunden": 4, "text": "Mathematik"},
+          {"schluessel": "E", "wochenstunden": 3, "text": "Englisch"},
+          {"schluessel": "GE", "wochenstunden": 2, "text": "Geschichte"},
+          {"schluessel": "EK", "wochenstunden": 2, "text": "Erdkunde/Geographie"},
+          {"schluessel": "PH", "wochenstunden": 2, "text": "Physik"},
+          {"schluessel": "SP", "wochenstunden": 2, "text": "Sport"}
+        ]
+      }
+    }
+  }
+}

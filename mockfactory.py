@@ -35,6 +35,7 @@ from patch_schueler_telefon import patch_schuler_telefon
 from patch_schueler_misc import patch_schueler_misc
 from patch_schueler_parents import patch_schuler_parents
 from patch_schueler__company import patch_schueler_company
+from populate_schueler_leistungsdaten import populate_schueler_leistungsdaten
 
 
 def main():
@@ -183,6 +184,11 @@ def main():
         help='Assign one random Betrieb to each existing Schueler record'
     )
     parser.add_argument(
+        '--populate-schueler-leistungsdaten',
+        action='store_true',
+        help='Create Leistungsdaten (Fächer) for each Schueler in current Lernabschnitt'
+    )
+    parser.add_argument(
         '--full-setup',
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
@@ -293,6 +299,9 @@ def main():
         return 0 if failed == 0 else 1
     elif args.patch_schueler_company:
         created, skipped, failed = patch_schueler_company(config)
+        return 0 if failed == 0 else 1
+    elif args.populate_schueler_leistungsdaten:
+        created, skipped, failed = populate_schueler_leistungsdaten(config)
         return 0 if failed == 0 else 1
     elif args.full_setup:
         full_setup_start = time.perf_counter()
