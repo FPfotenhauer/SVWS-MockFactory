@@ -67,7 +67,7 @@ def create_schema(config):
             headers=headers,
             json=body,
             verify=False,
-            timeout=30
+            timeout=120
         )
         
         print(f"Response Status Code: {response.status_code}")
