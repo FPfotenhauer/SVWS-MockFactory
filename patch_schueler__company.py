@@ -225,7 +225,7 @@ def extract_id(entry: dict) -> Optional[int]:
 
 
 def fetch_betriebe(base_url: str, session: requests.Session) -> List[int]:
-    url = f'{base_url}/betriebe'
+    url = f'{base_url}/schule/betriebe'
     resp = session.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
 

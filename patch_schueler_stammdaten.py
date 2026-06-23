@@ -178,11 +178,27 @@ def fetch_orte(base_url: str, session: requests.Session) -> List[dict]:
     return resp.json()
 
 
-def fetch_nationalitaeten(base_url: str, session: requests.Session) -> List[dict]:
-    url = f'{base_url}/schule/allgemein/nationalitaeten'
-    resp = session.get(url, timeout=API_TIMEOUT)
+def fetch_nationalitaeten_catalog(config) -> dict:
+    """Returns a mapping from ISO3 kuerzel (e.g. 'DEU') to numeric catalog ID."""
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/types/allinone.json"
+    auth = HTTPBasicAuth(db['username'], db['password'])
+    resp = requests.get(url, auth=auth, verify=False, timeout=30)
     resp.raise_for_status()
-    return resp.json()
+    data = resp.json()
+    nat_daten = (data.get('Nationalitaeten') or {}).get('daten') or []
+    mapping: dict = {}
+    for entry in nat_daten:
+        bezeichner = entry.get('bezeichner')
+        if not isinstance(bezeichner, str):
+            continue
+        historie = entry.get('historie') or []
+        if not historie:
+            continue
+        item_id = historie[-1].get('id')
+        if item_id is not None:
+            mapping[bezeichner.upper()] = item_id
+    return mapping
 
 
 def fetch_haltestellen(base_url: str, session: requests.Session) -> List[dict]:
@@ -375,17 +391,10 @@ def extract_nat_code(entry: dict) -> Optional[str]:
     return None
 
 
-def split_nationalitaeten(nationalitaeten: List[dict]) -> Tuple[Optional[str], List[str]]:
-    codes = []
-    for item in nationalitaeten:
-        code = extract_nat_code(item)
-        if code:
-            codes.append(code)
-
-    unique_codes = sorted(set(codes))
-    deu = 'DEU' if 'DEU' in unique_codes else None
-    others = [c for c in unique_codes if c != 'DEU']
-    return deu, others
+def split_nationalitaeten(nat_catalog: dict) -> Tuple[Optional[int], List[int]]:
+    deu_id = nat_catalog.get('DEU')
+    other_ids = [v for k, v in nat_catalog.items() if k != 'DEU']
+    return deu_id, other_ids
 
 
 def random_house_number() -> str:
@@ -453,14 +462,14 @@ def pick_wohnort(
     return school_ort_id
 
 
-def pick_staatsangehoerigkeit(deu_code: Optional[str], other_codes: List[str]) -> Optional[str]:
-    if deu_code and RAND.random() < 0.80:
-        return deu_code
+def pick_staatsangehoerigkeit(deu_id: Optional[int], other_ids: List[int]) -> Optional[int]:
+    if deu_id and RAND.random() < 0.80:
+        return deu_id
 
-    if other_codes:
-        return RAND.choice(other_codes)
+    if other_ids:
+        return RAND.choice(other_ids)
 
-    return deu_code
+    return deu_id
 
 
 def pick_status() -> int:
@@ -495,8 +504,8 @@ def build_payload_entry(
     streets_by_postal: Dict[str, List[str]],
     streets_by_city: Dict[str, List[str]],
     fallback_city_streets: List[str],
-    deu_code: Optional[str],
-    other_nat_codes: List[str],
+    deu_id: Optional[int],
+    other_nat_ids: List[int],
     haltestellen_ids: List[int],
     fahrschuelerarten_ids: List[int],
     use_openplz_streets: bool,
@@ -629,10 +638,10 @@ def build_payload_entry(
         end = date.today().year
         zuzugsjahr = RAND.randint(start, end) if start <= end else end
 
-    staatsangehoerigkeit = pick_staatsangehoerigkeit(deu_code, other_nat_codes)
-    geburtsland = pick_staatsangehoerigkeit(deu_code, other_nat_codes) or 'DEU'
-    geburtsland_vater = pick_staatsangehoerigkeit(deu_code, other_nat_codes) or geburtsland
-    geburtsland_mutter = pick_staatsangehoerigkeit(deu_code, other_nat_codes) or geburtsland
+    staatsangehoerigkeit = pick_staatsangehoerigkeit(deu_id, other_nat_ids)
+    geburtsland = pick_staatsangehoerigkeit(deu_id, other_nat_ids) or deu_id
+    geburtsland_vater = pick_staatsangehoerigkeit(deu_id, other_nat_ids) or geburtsland
+    geburtsland_mutter = pick_staatsangehoerigkeit(deu_id, other_nat_ids) or geburtsland
 
     status_override = schueler.get('statusOverride')
     if isinstance(status_override, int):
@@ -669,18 +678,18 @@ def build_payload_entry(
         'telefonMobil': random_mobile(),
         'emailPrivat': f"{email_local}@privat.schueler.example.com",
         'emailSchule': f"{email_local}@schulisch.schueler.example.com",
-        'staatsangehoerigkeitID': staatsangehoerigkeit,
-        'staatsangehoerigkeit2ID': None,
+        'idStaatsangehoerigkeit': staatsangehoerigkeit,
+        'idStaatsangehoerigkeit2': None,
         'religionID': religion_id,
         'druckeKonfessionAufZeugnisse': False,
         'religionabmeldung': None,
         'religionanmeldung': None,
         'hatMigrationshintergrund': hat_migrationshintergrund,
         'zuzugsjahr': zuzugsjahr,
-        'geburtsland': geburtsland,
-        'verkehrspracheFamilie': random_language_code(),
-        'geburtslandVater': geburtsland_vater,
-        'geburtslandMutter': geburtsland_mutter,
+        'idGeburtsland': geburtsland,
+        'idVerkehrspracheFamilie': random_language_code(),
+        'idGeburtslandVater': geburtsland_vater,
+        'idGeburtslandMutter': geburtsland_mutter,
         'status': status,
         'istDuplikat': False,
         'externeSchulNr': None,
@@ -723,7 +732,7 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     try:
         stammdaten = fetch_stammdaten(base_url, api_session)
         orte = fetch_orte(base_url, api_session)
-        nationalitaeten = fetch_nationalitaeten(base_url, api_session)
+        nat_catalog = fetch_nationalitaeten_catalog(config)
     except Exception as e:
         print(f'❌ Fehler beim Laden von Stammdaten/Katalogen: {e}')
         close_session(api_session)
@@ -781,7 +790,7 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     fallback_city_streets = [street for streets in streets_by_city.values() for street in streets]
     if not fallback_city_streets:
         fallback_city_streets = ['Hauptstraße']
-    deu_code, other_nat_codes = split_nationalitaeten(nationalitaeten)
+    deu_id, other_nat_ids = split_nationalitaeten(nat_catalog)
     use_openplz_streets = bool(db.get('useOpenPlzStreetLookup', True))
     openplz_session = create_openplz_session() if use_openplz_streets else None
     openplz_cache: Dict[Tuple[str, str], Tuple[List[str], str]] = {}
@@ -796,7 +805,7 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     used_email_locals: set = set()
 
     print(f'Gefunden: {len(schueler_list)} Schüler im Cache')
-    print(f'Orte: {len(all_ort_ids)}, Nationalitäten: {len(other_nat_codes) + (1 if deu_code else 0)}')
+    print(f'Orte: {len(all_ort_ids)}, Nationalitäten: {len(other_nat_ids) + (1 if deu_id else 0)}')
     print(f'Orte mit PLZ: {len(ort_id_to_postal)}')
     print(f'Haltestellen: {len(haltestellen_ids)}, Fahrschülerarten: {len(fahrschuelerarten_ids)}')
     print(f'Locality+PLZ Straßen-Mappinge: {len(streets_by_locality_postal)}')
@@ -824,8 +833,8 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
             streets_by_postal,
             streets_by_city,
             fallback_city_streets,
-            deu_code,
-            other_nat_codes,
+            deu_id,
+            other_nat_ids,
             haltestellen_ids,
             fahrschuelerarten_ids,
             use_openplz_streets,

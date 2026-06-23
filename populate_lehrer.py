@@ -62,13 +62,38 @@ def random_birthdate() -> str:
     return birth.isoformat()
 
 
-def pick_staatsangehoerigkeit() -> str:
+def fetch_nationalitaeten_catalog(config) -> dict:
+    """Returns a mapping from ISO3 kuerzel (e.g. 'DEU') to numeric catalog ID."""
+    db = config['database']
+    url = f"https://{db['server']}:{db['httpsport']}/types/allinone.json"
+    auth = HTTPBasicAuth(db['username'], db['password'])
+    resp = requests.get(url, auth=auth, verify=False, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    nat_daten = (data.get('Nationalitaeten') or {}).get('daten') or []
+    mapping: dict = {}
+    for entry in nat_daten:
+        bezeichner = entry.get('bezeichner')
+        if not isinstance(bezeichner, str):
+            continue
+        historie = entry.get('historie') or []
+        if not historie:
+            continue
+        item_id = historie[-1].get('id')
+        if item_id is not None:
+            mapping[bezeichner.upper()] = item_id
+    return mapping
+
+
+def pick_staatsangehoerigkeit(nat_catalog: dict) -> int | None:
     roll = RAND.random()
     if roll < 0.90:
-        return 'DEU'
-    if roll < 0.95:
-        return 'TUR'
-    return 'ITA'
+        key = 'DEU'
+    elif roll < 0.95:
+        key = 'TUR'
+    else:
+        key = 'ITA'
+    return nat_catalog.get(key)
 
 
 def slugify_mail_part(text: str) -> str:
@@ -178,6 +203,11 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
         print('❌ Keine Ort-IDs für Wuppertal gefunden. Abbruch.')
         return 0, 1
 
+    nat_catalog = fetch_nationalitaeten_catalog(config)
+    if not nat_catalog:
+        print('❌ Nationalitäten-Katalog konnte nicht geladen werden. Abbruch.')
+        return 0, 1
+
     url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/lehrer/create"
     auth = HTTPBasicAuth(db['username'], db['password'])
 
@@ -247,7 +277,7 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
             'vorname': vorname,
             'geschlecht': geschlecht,
             'geburtsdatum': geburtsdatum,
-            'staatsangehoerigkeitID': pick_staatsangehoerigkeit(),
+            'idStaatsangehoerigkeit': pick_staatsangehoerigkeit(nat_catalog),
             'strassenname': RAND.choice(strassen),
             'hausnummer': hausnummer(),
             'hausnummerZusatz': '',
@@ -270,17 +300,6 @@ def populate_lehrer(config, count: int | None = None) -> Tuple[int, int]:
                 verify=False,
                 timeout=20,
             )
-
-            # Fallback: fehlende Nationalität -> einmal ohne ID erneut senden
-            if resp.status_code == 404 and 'Nationalität' in resp.text:
-                payload['staatsangehoerigkeitID'] = None
-                resp = requests.post(
-                    url,
-                    json=payload,
-                    auth=auth,
-                    verify=False,
-                    timeout=20,
-                )
 
             if resp.status_code in (200, 201):
                 created += 1

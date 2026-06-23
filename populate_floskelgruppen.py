@@ -5,7 +5,11 @@ Populate Floskelgruppen catalog from Floskelgruppenart.json
 
 import json
 import requests
+from requests.auth import HTTPBasicAuth
+from urllib3.exceptions import InsecureRequestWarning
 from check_server import load_config
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 def load_floskelgruppen_data():
@@ -27,14 +31,15 @@ def populate_floskelgruppen(config):
         print("Error: No Floskelgruppen data found")
         return 0, 1
     
-    schema = config.get('schema', 'mockingbird')
-    username = config.get('username', 'Admin')
-    password = config.get('password', '')
-    server = config.get('server', 'localhost')
-    https_port = config.get('httpsport', 8443)
-    
+    db = config['database']
+    schema = db['schema']
+    username = db['username']
+    password = db['password']
+    server = db['server']
+    https_port = db['httpsport']
+
     base_url = f"https://{server}:{https_port}"
-    auth = (username, password)
+    auth = HTTPBasicAuth(username, password)
     
     print(f"\nBefülle Katalog 'Floskelgruppen' mit {len(floskelgruppen_data)} Einträgen...")
     url = f"{base_url}/db/{schema}/schule/floskelgruppen/create"

@@ -12,21 +12,29 @@ from urllib3.exceptions import InsecureRequestWarning
 # Suppress SSL warnings for self-signed certificates
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-# Map Floskelgruppe names to IDs
-FLOSKELGRUPPE_MAP = {
-    'Allgemeine Floskeln': 1,
-    'Floskeln für Arbeits- und Sozialverhalten': 2,
-    'Floskeln für außerunterrichtliche Aktivitäten': 3,
-    'Fachbezogene Floskeln': 4,
-    'Bemerkungen zum Förderschwerpunkt': 5,
-    'Floskeln für Fördermaßnahmen': 6,
-    'Floskeln für Vermerke': 7,
-    'Bemerkung zur Versetzung': 8,
-    'Floskeln für Zeugnisbemerkungen': 9,
-    'Floskeln für Lernentwicklung und Leistungsstand': 10,
-    'Floskeln für Übergangsempfehlungen': 11,
-    'Bemerkung zum Förderschwerpunkt': 5,  # Alias
+# Maps CSV group names to Floskelgruppe kuerzel
+GRUPPE_NAME_TO_KUERZEL = {
+    'Allgemeine Floskeln': 'ALLG',
+    'Floskeln für Arbeits- und Sozialverhalten': 'ASV',
+    'Floskeln für außerunterrichtliche Aktivitäten': 'AUE',
+    'Fachbezogene Floskeln': 'FACH',
+    'Bemerkungen zum Förderschwerpunkt': 'FSP',
+    'Bemerkung zum Förderschwerpunkt': 'FSP',
+    'Floskeln für Fördermaßnahmen': 'FOERD',
+    'Floskeln für Vermerke': 'VERM',
+    'Bemerkung zur Versetzung': 'VERS',
+    'Floskeln für Zeugnisbemerkungen': 'ZB',
+    'Floskeln für Lernentwicklung und Leistungsstand': 'LELS',
+    'Floskeln für Übergangsempfehlungen': 'UEG45',
 }
+
+
+def fetch_floskelgruppen_map(server, port, schema, auth) -> dict:
+    """Returns {kuerzel: id} for all Floskelgruppen in the DB."""
+    url = f"https://{server}:{port}/db/{schema}/schule/floskelgruppen"
+    resp = requests.get(url, auth=auth, verify=False, timeout=10)
+    resp.raise_for_status()
+    return {g['kuerzel']: g['id'] for g in resp.json()}
 
 
 def load_floskeln_data():
@@ -69,19 +77,25 @@ def populate_floskeln(config):
     username = config['database']['username']
     password = config['database']['password']
     
+    auth = HTTPBasicAuth(username, password)
     url = f"https://{server}:{port}/db/{schema}/schule/floskeln/create"
-    
+
     print(f"URL: {url}")
     print(f"Using username: {username}\n")
-    
+
+    kuerzel_to_id = fetch_floskelgruppen_map(server, port, schema, auth)
+    if not kuerzel_to_id:
+        print("❌ Keine Floskelgruppen in der DB gefunden. Bitte zuerst --populate-floskelgruppen ausführen.")
+        return 0, 1
+
     created = 0
     failed = 0
-    
+
     for idx, floskel in enumerate(floskeln_data, 1):
-        # Get Floskelgruppe ID
         gruppe_name = floskel['gruppe']
-        id_floskelgruppe = FLOSKELGRUPPE_MAP.get(gruppe_name)
-        
+        kuerzel = GRUPPE_NAME_TO_KUERZEL.get(gruppe_name)
+        id_floskelgruppe = kuerzel_to_id.get(kuerzel) if kuerzel else None
+
         if not id_floskelgruppe:
             print(f"[{idx}/{len(floskeln_data)}] {floskel['kuerzel']}: ❌ Unbekannte Floskelgruppe: {gruppe_name}")
             failed += 1
@@ -117,7 +131,7 @@ def populate_floskeln(config):
             response = requests.post(
                 url,
                 json=payload,
-                auth=HTTPBasicAuth(username, password),
+                auth=auth,
                 verify=False,
                 timeout=10
             )

@@ -64,15 +64,17 @@ def fetch_jahrgaenge(config) -> List[dict]:
 
 def fetch_classes(config, id_schuljahresabschnitt: Optional[int] = None) -> List[dict]:
     db = config['database']
-    if id_schuljahresabschnitt is not None:
-        url = (
-            f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
-            f"/klassen/abschnitt/{id_schuljahresabschnitt}"
-        )
-    else:
-        url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/klassen"
+    if id_schuljahresabschnitt is None:
+        stammdaten_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/stammdaten"
+        auth = HTTPBasicAuth(db['username'], db['password'])
+        sr = requests.get(stammdaten_url, auth=auth, verify=False, timeout=10)
+        sr.raise_for_status()
+        id_schuljahresabschnitt = sr.json().get('idSchuljahresabschnitt', 1)
+    url = (
+        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+        f"/klassen/minimal/abschnitt/{id_schuljahresabschnitt}"
+    )
     auth = HTTPBasicAuth(db['username'], db['password'])
-
     resp = requests.get(url, auth=auth, verify=False, timeout=20)
     resp.raise_for_status()
     return resp.json()

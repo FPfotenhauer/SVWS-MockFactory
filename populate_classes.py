@@ -449,14 +449,17 @@ def populate_classes(config) -> Tuple[int, int]:
 def fetch_all_classes(config) -> List[dict]:
     """
     Fetch all classes from the database.
-    
+
     Returns:
         list: List of class objects with id, kuerzel, etc.
     """
     db = config['database']
-    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/klassen"
     auth = HTTPBasicAuth(db['username'], db['password'])
-    
+    stammdaten_url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/stammdaten"
+    stammdaten_resp = requests.get(stammdaten_url, auth=auth, verify=False, timeout=10)
+    stammdaten_resp.raise_for_status()
+    id_abschnitt = stammdaten_resp.json().get('idSchuljahresabschnitt', 1)
+    url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/klassen/minimal/abschnitt/{id_abschnitt}"
     resp = requests.get(url, auth=auth, verify=False, timeout=10)
     resp.raise_for_status()
     return resp.json()
