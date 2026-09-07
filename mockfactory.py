@@ -193,7 +193,30 @@ def main():
         action='store_true',
         help='Complete setup with all catalogs: create schema, initialize database, and populate all catalogs'
     )
-    
+    parser.add_argument(
+        '--count',
+        type=int,
+        default=None,
+        help='(mit --populate-schueler) Anzahl zu erzeugender Schüler, überschreibt config anzahlschueler'
+    )
+    parser.add_argument(
+        '--jahrgang',
+        type=str,
+        default=None,
+        help='(mit --populate-schueler) nur Klassen dieses Jahrgangs bestücken, z.B. 10, 09, EF'
+    )
+    parser.add_argument(
+        '--status',
+        type=int,
+        default=None,
+        help='(mit --populate-schueler) Status der erzeugten Schüler (z.B. 2 = aktiv); Default 0'
+    )
+    parser.add_argument(
+        '--append',
+        action='store_true',
+        help='(mit --populate-schueler) .schueler_cache.json nicht löschen, neue Schüler anhängen'
+    )
+
     args = parser.parse_args()
     
     # Load configuration
@@ -277,7 +300,13 @@ def main():
         assigned, failed = assign_class_leaders(config)
         return 0 if failed == 0 else 1
     elif args.populate_schueler:
-        created, failed = populate_schueler(config)
+        created, failed = populate_schueler(
+            config,
+            count=args.count,
+            jahrgang=args.jahrgang,
+            status=args.status,
+            append=args.append,
+        )
         return 0 if failed == 0 else 1
     elif args.patch_schueler_stammdaten:
         patched, failed = patch_schueler_stammdaten(config)

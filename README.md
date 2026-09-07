@@ -252,6 +252,9 @@ python mockfactory.py --patch-schueler-company
 API-Endpunkte dafür:
 - `GET /db/{schema}/schule/betriebe` (primär, Liste verfügbarer Betriebe)
 - `GET /db/{schema}/betriebe` (Fallback für ältere Serverstände)
+- `GET /db/{schema}/beschaeftigungsarten` – ist der Katalog leer, wird ein Standard-Satz
+  (Ausbildung, Praktikum, Ferienbeschäftigung, Nebentätigkeit, FSJ) über
+  `POST /db/{schema}/beschaeftigungsarten/create` angelegt; `idBeschaeftigungsart` ist optional
 - `POST /db/{schema}/schueler/schueler-betriebe/create` (primär laut OpenAPI)
 - `POST /db/{schema}/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}` (historisch)
 - `POST /db/{schema}/schule/betriebe/schuelerbetrieb/new/schueler/{idSchueler}/betrieb/{idBetrieb}` (historischer Fallback-Kandidat)
@@ -428,6 +431,49 @@ Das Programm generiert Klassen dynamisch:
 5. Erstellt realistische Telefonnummern (0202-######) und E-Mail-Adressen (kita1@kita.example.com)
 6. Verhindert Duplikate durch erweiterten Namenspool (50 Namen × 3 Präfixe × 8 Suffixe = 1.200 Kombinationen)
 7. Automatisches Retry bei Duplikaten (bis zu 3 Versuche mit neuen Namen)
+
+### Schülerdaten generieren (synthetisch)
+
+Erzeugt Schülerdatensätze mit schulform-/jahrgangsgerechter Altersverteilung und
+verteilt sie auf die vorhandenen Klassen (Geschlechtermix ~49 % m / 49 % w / 2 % divers,
+gewichtete Religionszuordnung). Die Anzahl wird standardmäßig aus `config.json`
+(`anzahlschueler`) gelesen:
+
+```bash
+python mockfactory.py --populate-schueler
+```
+
+**API-Endpunkte**:
+- CREATE: `POST /db/{schema}/schueler/create`
+- GET: `GET /db/{schema}/schule/stammdaten` (Schulform, `idSchuljahresabschnitt`)
+- GET: `GET /db/{schema}/jahrgaenge`
+- GET: `GET /db/{schema}/schule/religionen`
+- GET (Klassen): `GET /db/{schema}/klassen/abschnitt/{id}` mit Fallback auf
+  `GET /db/{schema}/schueler/abschnitt/{id}/auswahlliste`, falls die `/klassen`-Endpunkte
+  nicht verfügbar sind (HTTP 500); anschließend `.klassen_cache.json` als letzter Fallback
+
+**Authentifizierung**: Basic Auth mit `username` und `password`  
+**Cache**: Speichert erzeugte Schüler in `.schueler_cache.json` (für die nachgelagerten
+`--patch-schueler-*`-Schritte). Die Cache-Datei wird ignoriert (`.gitignore`).
+
+#### Optionale Parameter (nur mit `--populate-schueler`)
+
+| Parameter | Beschreibung |
+|-----------|--------------|
+| `--count N` | Anzahl zu erzeugender Schüler; überschreibt `anzahlschueler` aus `config.json` |
+| `--jahrgang K` | Nur Klassen dieses Jahrgangs bestücken, z. B. `10`, `09`, `EF` (Vergleich ohne führende Null / Groß-/Kleinschreibung). Bei aktivem Filter entfällt die zusätzliche 10-%-Neuaufnahme-Logik |
+| `--status S` | Status der erzeugten Schüler, z. B. `2` (aktiv). Standard: `0` (Neuaufnahme). Wird als `statusOverride` im Cache abgelegt, sodass nachgelagerte Patch-Schritte den Status beibehalten |
+| `--append` | `.schueler_cache.json` nicht löschen, neue Schüler an den bestehenden Cache anhängen |
+
+**Beispiel** – 100 aktive Schüler gezielt in Jahrgang 10 nachgenerieren:
+
+```bash
+python mockfactory.py --populate-schueler --jahrgang 10 --status 2 --count 100
+```
+
+Die Parameter funktionieren auch beim direkten Aufruf von `python populate_schueler.py`
+(z. B. `python populate_schueler.py --jahrgang EF --status 2 --count 30 --append`).
+Beim `--full-setup` werden sie nicht verwendet (dort gilt `anzahlschueler` aus `config.json`).
 
 ### Basis-Setup (Schema + Initialisierung)
 
@@ -746,6 +792,7 @@ Das Programm nutzt folgende Dateien zur Generierung realistischer Testdaten und 
   - Kindergarten (20 synthetische Einträge, nur für Schulformen G, PS, S, V, WF)
   - Lehrkräfte (Zahl aus config.json, standardmäßig 100 mit Geschlechtsmix, Titel, Amtsbezeichnung)
   - Klassen (dynamisch basierend auf anzahlschueler/25, schulformspezifische Jahrgänge, automatische Klassenleiterzuweisung)
+- Schülerdaten generieren (schulform-/jahrgangsgerechte Altersverteilung; optional gezielt per `--count`/`--jahrgang`/`--status`/`--append`)
 - Grundlegende Konfigurationsverwaltung
 - Fehlerbehandlung und Logging
 - Schüler-Schulbesuch patchen (Zieljahrgänge 05-10, EF, Q1, Q2)

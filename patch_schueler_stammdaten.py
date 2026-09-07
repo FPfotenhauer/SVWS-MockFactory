@@ -30,6 +30,10 @@ PATCH_TIMEOUT = 60
 OPENPLZ_CONNECT_TIMEOUT = 2
 OPENPLZ_READ_TIMEOUT = 3
 
+# Verkehrssprachen-Katalog-IDs, einmalig in patch_schueler_stammdaten() gesetzt.
+_VERKEHRSSPRACHE_DEU_ID: Optional[int] = None
+_VERKEHRSSPRACHE_OTHER_IDS: List[int] = []
+
 
 def create_api_session(auth: HTTPBasicAuth) -> requests.Session:
     session = requests.Session()
@@ -199,6 +203,17 @@ def fetch_nationalitaeten_catalog(config) -> dict:
         if item_id is not None:
             mapping[bezeichner.upper()] = item_id
     return mapping
+
+
+def fetch_verkehrssprachen(base_url: str, session: requests.Session) -> List[dict]:
+    url = f'{base_url}/schule/allgemein/verkehrssprachen'
+    resp = session.get(url, timeout=API_TIMEOUT)
+    if resp.status_code >= 400:
+        return []
+    try:
+        return resp.json()
+    except Exception:
+        return []
 
 
 def fetch_haltestellen(base_url: str, session: requests.Session) -> List[dict]:
@@ -383,18 +398,28 @@ def get_school_ort_id(stammdaten: dict, orte: List[dict]) -> Optional[int]:
     return None
 
 
-def extract_nat_code(entry: dict) -> Optional[str]:
-    for key in ('kuerzel', 'iso3', 'code', 'id', 'staat'):
-        value = entry.get(key)
-        if isinstance(value, str) and len(value.strip()) == 3 and value.strip().isalpha():
-            return value.strip().upper()
-    return None
-
-
 def split_nationalitaeten(nat_catalog: dict) -> Tuple[Optional[int], List[int]]:
     deu_id = nat_catalog.get('DEU')
     other_ids = [v for k, v in nat_catalog.items() if k != 'DEU']
     return deu_id, other_ids
+
+
+def split_verkehrssprachen(verkehrssprachen: List[dict]) -> Tuple[Optional[int], List[int]]:
+    """Liefert (Deutsch-Katalog-ID, Liste weiterer Sprach-Katalog-IDs)."""
+    deu: Optional[int] = None
+    others: List[int] = []
+    for item in verkehrssprachen:
+        cat_id = item.get('id')
+        # id 0 ("und" / Unbekannt) ist ein Sentinel, den der Server bei der
+        # Auflösung ablehnt – daher nur echte, positive Katalog-IDs verwenden.
+        if not isinstance(cat_id, int) or cat_id <= 0:
+            continue
+        kuerzel = str(item.get('kuerzel') or '').strip().lower()
+        if kuerzel == 'deu':
+            deu = cat_id
+        else:
+            others.append(cat_id)
+    return deu, others
 
 
 def random_house_number() -> str:
@@ -431,9 +456,13 @@ def format_schuelerausweis_id(running_number: int) -> str:
     return f"AS-{running_number:010d}"
 
 
-def random_language_code() -> str:
-    # ISO 639-3 examples
-    return RAND.choice(['deu', 'tur', 'ara', 'eng', 'rus', 'pol', 'sqi', 'ita', 'fra', 'oji'])
+def random_verkehrssprache_id() -> Optional[int]:
+    """Katalog-ID der Verkehrssprache der Familie (85% Deutsch, sonst zufällig)."""
+    if _VERKEHRSSPRACHE_DEU_ID is not None and RAND.random() < 0.85:
+        return _VERKEHRSSPRACHE_DEU_ID
+    if _VERKEHRSSPRACHE_OTHER_IDS:
+        return RAND.choice(_VERKEHRSSPRACHE_OTHER_IDS)
+    return _VERKEHRSSPRACHE_DEU_ID
 
 
 def parse_birth_year(geburtsdatum: Optional[str]) -> int:
@@ -638,6 +667,7 @@ def build_payload_entry(
         end = date.today().year
         zuzugsjahr = RAND.randint(start, end) if start <= end else end
 
+    # Werte sind seit dem ASD-Refactoring numerische Katalog-IDs (nicht mehr ISO-3-Codes).
     staatsangehoerigkeit = pick_staatsangehoerigkeit(deu_id, other_nat_ids)
     geburtsland = pick_staatsangehoerigkeit(deu_id, other_nat_ids) or deu_id
     geburtsland_vater = pick_staatsangehoerigkeit(deu_id, other_nat_ids) or geburtsland
@@ -687,7 +717,7 @@ def build_payload_entry(
         'hatMigrationshintergrund': hat_migrationshintergrund,
         'zuzugsjahr': zuzugsjahr,
         'idGeburtsland': geburtsland,
-        'idVerkehrspracheFamilie': random_language_code(),
+        'idVerkehrspracheFamilie': random_verkehrssprache_id(),
         'idGeburtslandVater': geburtsland_vater,
         'idGeburtslandMutter': geburtsland_mutter,
         'status': status,
@@ -733,10 +763,14 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
         stammdaten = fetch_stammdaten(base_url, api_session)
         orte = fetch_orte(base_url, api_session)
         nat_catalog = fetch_nationalitaeten_catalog(config)
+        verkehrssprachen = fetch_verkehrssprachen(base_url, api_session)
     except Exception as e:
         print(f'❌ Fehler beim Laden von Stammdaten/Katalogen: {e}')
         close_session(api_session)
         return 0, 1
+
+    global _VERKEHRSSPRACHE_DEU_ID, _VERKEHRSSPRACHE_OTHER_IDS
+    _VERKEHRSSPRACHE_DEU_ID, _VERKEHRSSPRACHE_OTHER_IDS = split_verkehrssprachen(verkehrssprachen)
 
     haltestellen = fetch_haltestellen(base_url, api_session)
     haltestellen_ids = [hid for h in haltestellen for hid in [extract_id(h)] if hid is not None]

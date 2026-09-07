@@ -268,11 +268,65 @@ def fetch_betriebe_with_fallback(base_url: str, session: requests.Session) -> Li
     raise requests.exceptions.RequestException(' | '.join(errors))
 
 
-def build_payload(schueler_id: int, betrieb_id: int, vertragsbeginn: str, vertragsende: str) -> dict:
+DEFAULT_BESCHAEFTIGUNGSARTEN = [
+    'Ausbildung',
+    'Praktikum',
+    'Ferienbeschäftigung',
+    'Nebentätigkeit',
+    'Freiwilliges Soziales Jahr',
+]
+
+
+def resolve_beschaeftigungsart_ids(base_url: str, session: requests.Session) -> List[int]:
+    """Liefert die IDs des Beschäftigungsarten-Katalogs.
+
+    Ist der Katalog leer (bei frisch initialisierten Schemata der Fall), wird ein
+    kleiner Standard-Satz über POST /beschaeftigungsarten/create angelegt.
+    Das Feld idBeschaeftigungsart ist optional; schlägt alles fehl, wird [] zurück-
+    gegeben und die Zuordnung ohne Beschäftigungsart erstellt.
+    """
+    list_url = f'{base_url}/beschaeftigungsarten'
+    try:
+        resp = session.get(list_url, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+        ids = [extract_id(item) for item in data if extract_id(item) is not None] if isinstance(data, list) else []
+        if ids:
+            return ids
+    except requests.exceptions.RequestException as exc:
+        print(f"⚠️  Beschäftigungsarten konnten nicht geladen werden: {exc}")
+        return []
+
+    print('ℹ️  Beschäftigungsarten-Katalog ist leer – lege Standard-Einträge an ...')
+    created_ids: List[int] = []
+    create_url = f'{base_url}/beschaeftigungsarten/create'
+    for sortierung, bezeichnung in enumerate(DEFAULT_BESCHAEFTIGUNGSARTEN, start=1):
+        payload = {'bezeichnung': bezeichnung, 'sortierung': sortierung, 'istSichtbar': True}
+        try:
+            resp = session.post(create_url, json=payload, timeout=REQUEST_TIMEOUT)
+            if resp.status_code in (200, 201):
+                new_id = extract_id(resp.json())
+                if new_id is not None:
+                    created_ids.append(new_id)
+                    print(f"   ✓ {bezeichnung} (id {new_id})")
+            else:
+                print(f"   ❌ {bezeichnung}: HTTP {resp.status_code} - {resp.text[:120]}")
+        except requests.exceptions.RequestException as exc:
+            print(f"   ❌ {bezeichnung}: {exc}")
+    return created_ids
+
+
+def build_payload(
+    schueler_id: int,
+    betrieb_id: int,
+    vertragsbeginn: str,
+    vertragsende: str,
+    beschaeftigungsart_id: Optional[int] = None,
+) -> dict:
     return {
         'idSchueler': schueler_id,
         'idBetrieb': betrieb_id,
-        'idBeschaeftigungsart': 1,
+        'idBeschaeftigungsart': beschaeftigungsart_id,
         'vertragsbeginn': vertragsbeginn,
         'vertragsende': vertragsende,
         'nameAusbilder': None,
@@ -317,6 +371,14 @@ def patch_schueler_company(config):
         print('❌ Keine Betrieb-IDs gefunden.')
         return 0, 0, len(schueler_list)
 
+    print('Lade Beschäftigungsarten...')
+    with create_http_session(auth) as ba_session:
+        beschaeftigungsart_ids = resolve_beschaeftigungsart_ids(base_url, ba_session)
+    if beschaeftigungsart_ids:
+        print(f'Verfügbare Beschäftigungsarten: {len(beschaeftigungsart_ids)}')
+    else:
+        print('ℹ️  Zuordnungen werden ohne Beschäftigungsart erstellt (Feld ist optional).')
+
     total = len(schueler_list)
     created = 0
     skipped = 0
@@ -329,7 +391,11 @@ def patch_schueler_company(config):
 
     endpoint_template: Optional[str] = None
     probe_company_id = betriebe_ids[0]
-    probe_payload = build_payload(first_student_id, probe_company_id, vertragsbeginn_iso, vertragsende_iso)
+    probe_beschaeftigungsart_id = beschaeftigungsart_ids[0] if beschaeftigungsart_ids else None
+    probe_payload = build_payload(
+        first_student_id, probe_company_id, vertragsbeginn_iso, vertragsende_iso,
+        probe_beschaeftigungsart_id,
+    )
     with create_http_session(auth) as probe_session:
         endpoint_template, probe_result = select_assignment_endpoint(
             base_url,
@@ -374,7 +440,10 @@ def patch_schueler_company(config):
 
         session, rng = get_thread_state(auth)
         betrieb_id = rng.choice(betriebe_ids)
-        payload = build_payload(schueler_id, betrieb_id, vertragsbeginn_iso, vertragsende_iso)
+        beschaeftigungsart_id = rng.choice(beschaeftigungsart_ids) if beschaeftigungsart_ids else None
+        payload = build_payload(
+            schueler_id, betrieb_id, vertragsbeginn_iso, vertragsende_iso, beschaeftigungsart_id,
+        )
         url = build_assignment_url(base_url, endpoint_template, schueler_id, betrieb_id)
 
         retries = 1 if is_create_endpoint(endpoint_template) else 3

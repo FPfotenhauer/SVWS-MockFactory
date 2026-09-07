@@ -80,6 +80,28 @@ def fetch_classes(config, id_schuljahresabschnitt: Optional[int] = None) -> List
     return resp.json()
 
 
+def fetch_classes_via_auswahlliste(config, id_schuljahresabschnitt: int) -> List[dict]:
+    """Fallback-Quelle für Klassen, falls die /klassen-Endpunkte nicht verfügbar sind.
+
+    Die Schüler-Auswahlliste enthält die vollständigen Klassen-Objekte für den
+    angegebenen Schuljahresabschnitt und bleibt auch dann erreichbar, wenn
+    /klassen bzw. /klassen/abschnitt/{id} mit HTTP 500 antwortet.
+    """
+    db = config['database']
+    url = (
+        f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}"
+        f"/schueler/abschnitt/{id_schuljahresabschnitt}/auswahlliste"
+    )
+    auth = HTTPBasicAuth(db['username'], db['password'])
+
+    resp = requests.get(url, auth=auth, verify=False, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, dict) and isinstance(data.get('klassen'), list):
+        return data['klassen']
+    return []
+
+
 def fetch_religionen(config) -> List[dict]:
     db = config['database']
     url = f"https://{db['server']}:{db['httpsport']}/db/{db['schema']}/schule/religionen"
@@ -199,6 +221,52 @@ def infer_jahrgang_kuerzel_from_class_kuerzel(klassen_kuerzel: str) -> Optional[
     return str(int(m.group(1))).zfill(2)
 
 
+def normalize_jahrgang(value: str) -> str:
+    """Vereinheitlicht Jahrgangs-Kürzel für Vergleiche ('09'/'9' -> '9', 'ef' -> 'EF')."""
+    text = (value or '').strip().upper()
+    if not text:
+        return ''
+    if text.isdigit():
+        return str(int(text))
+    return text
+
+
+def _write_classes_cache(cache_file: Path, classes: List[dict]) -> None:
+    try:
+        payload = [
+            {
+                'id': c['id'],
+                'kuerzel': c.get('kuerzel', str(c['id'])),
+                'idJahrgang': c.get('idJahrgang'),
+            }
+            for c in classes
+            if isinstance(c.get('id'), int)
+        ]
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"⚠️  Konnte .klassen_cache.json nicht aktualisieren: {e}")
+
+
+def _classes_from_api_list(classes_all: List[dict], id_schuljahresabschnitt: int) -> List[dict]:
+    result: List[dict] = []
+    for k in classes_all:
+        k_abschnitt = k.get('idSchuljahresabschnitt')
+        if k_abschnitt is not None and k_abschnitt != id_schuljahresabschnitt:
+            continue
+        class_id = k.get('id')
+        jg_id = extract_class_yeargroup_id(k)
+        if class_id and jg_id:
+            result.append(
+                {
+                    'id': class_id,
+                    'kuerzel': k.get('kuerzel', str(class_id)),
+                    'idJahrgang': jg_id,
+                }
+            )
+    return result
+
+
 def load_classes_from_cache(cache_file: Path, yeargroup_id_by_kuerzel: Dict[str, int]) -> List[dict]:
     if not cache_file.exists():
         return []
@@ -214,6 +282,17 @@ def load_classes_from_cache(cache_file: Path, yeargroup_id_by_kuerzel: Dict[str,
         class_id = entry.get('id')
         kuerzel = entry.get('kuerzel', str(class_id or ''))
         if not isinstance(class_id, int):
+            continue
+
+        explicit_jg = entry.get('idJahrgang')
+        if isinstance(explicit_jg, int):
+            result.append(
+                {
+                    'id': class_id,
+                    'kuerzel': str(kuerzel),
+                    'idJahrgang': explicit_jg,
+                }
+            )
             continue
 
         jg_kuerzel = infer_jahrgang_kuerzel_from_class_kuerzel(str(kuerzel))
@@ -242,46 +321,35 @@ def load_classes(config, id_schuljahresabschnitt: int, yeargroup_id_by_kuerzel: 
         print(f"ℹ️  Verwende {len(cached_classes)} Klassen aus .klassen_cache.json")
         return cached_classes
 
-    classes: List[dict] = []
-    try:
-        classes_all = fetch_classes(config, id_schuljahresabschnitt=id_schuljahresabschnitt)
-        for k in classes_all:
-            k_abschnitt = k.get('idSchuljahresabschnitt')
-            if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
-                class_id = k.get('id')
-                jg_id = extract_class_yeargroup_id(k)
-                if class_id and jg_id:
-                    classes.append(
-                        {
-                            'id': class_id,
-                            'kuerzel': k.get('kuerzel', str(class_id)),
-                            'idJahrgang': jg_id,
-                        }
-                    )
-    except Exception as e:
-        print(f"⚠️  Fehler beim Laden der Klassen per Abschnitts-API: {e}")
-        print('   Versuche Fallback über /klassen ...')
+    # Live-Quellen der Reihe nach probieren. Die Abschnitts-API ist die
+    # bevorzugte Quelle; die Schüler-Auswahlliste dient als Fallback, falls
+    # /klassen* mit HTTP 500 antwortet.
+    live_sources = (
+        (
+            'Abschnitts-API (/klassen/minimal/abschnitt)',
+            lambda: fetch_classes(config, id_schuljahresabschnitt=id_schuljahresabschnitt),
+        ),
+        (
+            'Schüler-Auswahlliste',
+            lambda: fetch_classes_via_auswahlliste(config, id_schuljahresabschnitt),
+        ),
+    )
+
+    for label, loader in live_sources:
         try:
-            classes_all = fetch_classes(config)
-            for k in classes_all:
-                k_abschnitt = k.get('idSchuljahresabschnitt')
-                if k_abschnitt is None or k_abschnitt == id_schuljahresabschnitt:
-                    class_id = k.get('id')
-                    jg_id = extract_class_yeargroup_id(k)
-                    if class_id and jg_id:
-                        classes.append(
-                            {
-                                'id': class_id,
-                                'kuerzel': k.get('kuerzel', str(class_id)),
-                                'idJahrgang': jg_id,
-                            }
-                        )
-        except Exception as e2:
-            print(f"⚠️  Fehler beim Laden der Klassen per /klassen: {e2}")
-        print('   Versuche Fallback über .klassen_cache.json ...')
-        classes = load_classes_from_cache(cache_file, yeargroup_id_by_kuerzel)
+            classes = _classes_from_api_list(loader(), id_schuljahresabschnitt)
+        except Exception as e:
+            print(f"⚠️  Klassen über {label} nicht ladbar: {e}")
+            continue
         if classes:
-            print(f"✓ Fallback erfolgreich: {len(classes)} Klassen aus Cache geladen")
+            print(f"ℹ️  {len(classes)} Klassen über {label} geladen")
+            _write_classes_cache(cache_file, classes)
+            return classes
+
+    print('   Versuche Fallback über .klassen_cache.json ...')
+    classes = load_classes_from_cache(cache_file, yeargroup_id_by_kuerzel)
+    if classes:
+        print(f"✓ Fallback erfolgreich: {len(classes)} Klassen aus Cache geladen")
 
     return classes
 
@@ -441,10 +509,36 @@ def pick_first_names(geschlecht: int, vornamen_m: List[str], vornamen_w: List[st
     return first, alle
 
 
-def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
+def populate_schueler(
+    config,
+    count: Optional[int] = None,
+    jahrgang: Optional[str] = None,
+    status: Optional[int] = None,
+    append: bool = False,
+) -> Tuple[int, int]:
+    """Erzeugt Schülerdatensätze.
+
+    count    -- Anzahl (Default: config['database']['anzahlschueler'])
+    jahrgang -- Nur Klassen dieses Jahrgangs bestücken (z.B. '10', '09', 'EF').
+                Ist ein Jahrgang gesetzt, entfällt die zusätzliche 10%-Aufnahme-Logik.
+    status   -- Status der erzeugten Schüler (z.B. 2 = aktiv). Default: 0.
+    append   -- .schueler_cache.json nicht löschen, neue Einträge anhängen.
+    """
     cache_file = Path(__file__).parent / '.schueler_cache.json'
-    if cache_file.exists():
+    existing_cache: List[dict] = []
+    if append and cache_file.exists():
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                existing_cache = json.load(f)
+            if not isinstance(existing_cache, list):
+                existing_cache = []
+            print(f"ℹ️  Append-Modus: {len(existing_cache)} vorhandene Cache-Einträge bleiben erhalten")
+        except Exception:
+            existing_cache = []
+    elif cache_file.exists():
         cache_file.unlink()
+
+    status_value = status if isinstance(status, int) else 0
 
     nachnamen = load_nachnamen()
     vornamen_m = load_vornamen('vornamen_m.json')
@@ -504,6 +598,25 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
         print('   Hinweis: Bei API-Fehlern kann .klassen_cache.json als Fallback genutzt werden.')
         return 0, 1
 
+    target_jahrgang = normalize_jahrgang(jahrgang) if jahrgang else None
+    if target_jahrgang:
+        filtered = [
+            c for c in classes
+            if normalize_jahrgang(jahrgang_map.get(c.get('idJahrgang'), '')) == target_jahrgang
+        ]
+        if not filtered:
+            verfuegbar = sorted({
+                jahrgang_map.get(c.get('idJahrgang'), '?') for c in classes
+            })
+            print(f"❌ Keine Klassen für Jahrgang '{jahrgang}' gefunden.")
+            print(f"   Verfügbare Jahrgänge mit Klassen: {', '.join(verfuegbar)}")
+            return 0, 1
+        classes = filtered
+        print(
+            f"ℹ️  Jahrgangsfilter '{jahrgang}': {len(classes)} Klasse(n) "
+            f"({', '.join(c['kuerzel'] for c in classes)})"
+        )
+
     # Calculate classes per yeargroup to handle Oberstufe (EF/Q1/Q2) properly
     classes_per_jahrgang = defaultdict(int)
     for c in classes:
@@ -546,7 +659,8 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
     divers_code = db.get('schuelerDiversGeschlechtCode', 5)
     if not isinstance(divers_code, int):
         divers_code = 5
-    extra_students_target = max(0, int(total * 0.10))
+    # Bei aktivem Jahrgangsfilter keine zusätzlichen 10%-Aufnahmeschüler erzeugen.
+    extra_students_target = 0 if target_jahrgang else max(0, int(total * 0.10))
     extra_batches: List[dict] = []
     extra_class_sequence: List[dict] = []
 
@@ -610,6 +724,9 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
     print(f"Schulform: {schulform}")
     print(f"idSchuljahresabschnitt: {id_schuljahresabschnitt}")
     print(f"Klassen für Aufnahme: {len(classes)}")
+    print(f"Status der erzeugten Schüler: {status_value}")
+    if target_jahrgang:
+        print(f"Jahrgangsfilter: {jahrgang}")
     if extra_batches:
         for batch in extra_batches:
             print(
@@ -667,13 +784,15 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
         if requested_geschlecht not in (3, 4):
             gesendetes_geschlecht = requested_geschlecht
 
+        effective_status = status_override if isinstance(status_override, int) else status_value
+
         payload = {
             'nachname': nachname,
             'vorname': vorname,
             'alleVornamen': alle_vornamen,
             'geschlecht': gesendetes_geschlecht,
             'geburtsdatum': geburtsdatum,
-            'status': 0,
+            'status': effective_status,
             'anmeldedatum': anmeldedatum,
             'aufnahmedatum': aufnahmedatum,
             'beginnBildungsgang': None,
@@ -752,7 +871,9 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
                                 'idKlasse': id_klasse,
                                 'jahrgangKuerzel': jahrgang_kuerzel,
                                 'klassenKuerzel': klasse['kuerzel'],
-                                'statusOverride': status_override,
+                                'statusOverride': (
+                                    status_value if status is not None else status_override
+                                ),
                             }
                         )
                 except Exception:
@@ -769,10 +890,17 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
             failed += 1
             print(f"[{idx}/{total_with_extra}] {vorname} {nachname}: ❌ Fehler: {exc}")
 
-    if cache_data:
+    all_cache = existing_cache + cache_data
+    if all_cache:
         with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, indent=2, ensure_ascii=False)
-        print(f"\n💾 {len(cache_data)} Schüler in Cache gespeichert ({cache_file.name})")
+            json.dump(all_cache, f, indent=2, ensure_ascii=False)
+        if existing_cache:
+            print(
+                f"\n💾 {len(cache_data)} neue Schüler in Cache angehängt "
+                f"({cache_file.name}), gesamt {len(all_cache)}"
+            )
+        else:
+            print(f"\n💾 {len(cache_data)} Schüler in Cache gespeichert ({cache_file.name})")
 
     print(f"\nErgebnis: {created} erfolgreich, {failed} fehlgeschlagen")
     if failed == 0:
@@ -784,7 +912,28 @@ def populate_schueler(config, count: Optional[int] = None) -> Tuple[int, int]:
 
 
 if __name__ == '__main__':
+    import argparse
+
     from check_server import load_config
 
+    parser = argparse.ArgumentParser(
+        description='Erzeugt Schülerdatensätze (optional gefiltert nach Jahrgang/Status).'
+    )
+    parser.add_argument('--count', type=int, default=None,
+                        help='Anzahl zu erzeugender Schüler (Default: config anzahlschueler)')
+    parser.add_argument('--jahrgang', type=str, default=None,
+                        help="Nur Klassen dieses Jahrgangs bestücken, z.B. 10, 09, EF")
+    parser.add_argument('--status', type=int, default=None,
+                        help='Status der erzeugten Schüler (z.B. 2 = aktiv). Default: 0')
+    parser.add_argument('--append', action='store_true',
+                        help='.schueler_cache.json nicht löschen, neue Schüler anhängen')
+    args = parser.parse_args()
+
     cfg = load_config()
-    populate_schueler(cfg)
+    populate_schueler(
+        cfg,
+        count=args.count,
+        jahrgang=args.jahrgang,
+        status=args.status,
+        append=args.append,
+    )

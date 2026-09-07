@@ -30,7 +30,7 @@ VORIGE_ENTLASSGRUND_ID = 4
 VORIGE_ART_LETZTE_VERSETZUNG = '11101'
 GRUNDSCHULE_EINSCHULUNGSART_ID = 51
 ID_GRUNDSCHULE_JAHRE_EINGANGSPHASE = 2
-ID_KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG_KEY = 'idKuerzelGrundschuleUebergangsempfehlung'
+ID_KUERZEL_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG_KEY = 'idUebergangsempfehlungGrundschule'
 DEFAULT_GRUNDSCHULE_UEBERGANGSEMPFEHLUNG = 'R/GY'
 ALLOWED_SEK1_SCHULFORMEN = {'H', 'R', 'GY', 'GE', 'FW', 'S', 'SK', 'PS'}
 
@@ -303,16 +303,17 @@ def patch_schulbesuch(
     id_uebergangsempfehlung: Optional[int],
 ) -> requests.Response:
     url = f'{base_url}/schueler/{schueler_id}/schulbesuch'
+    # Feldnamen gemäß SchulbesuchPatchRequest (Server-Refactoring "SchulbesuchService", Mai 2026)
     payload = {
         SCHULBESUCH_PATCH_KEY: grundschule_id,
-        'vorigeEntlassgrundID': VORIGE_ENTLASSGRUND_ID,
-        'vorigeArtLetzteVersetzung': VORIGE_ART_LETZTE_VERSETZUNG,
-        'vorigeEntlassdatum': vorige_entlassdatum,
-        'grundschuleEinschulungsjahr': grundschule_einschulungsjahr,
-        'grundschuleEinschulungsartID': GRUNDSCHULE_EINSCHULUNGSART_ID,
-        'idGrundschuleJahreEingangsphase': ID_GRUNDSCHULE_JAHRE_EINGANGSPHASE,
-        'sekIWechsel': sek1_wechsel,
-        'sekIErsteSchulform': sek1_erste_schulform,
+        'idEntlassgrundVorherigeSchule': VORIGE_ENTLASSGRUND_ID,
+        'idHerkunftsartVersetzungVorherigeSchule': VORIGE_ART_LETZTE_VERSETZUNG,
+        'entlassdatumVorherigeSchule': vorige_entlassdatum,
+        'einschulungsjahrGrundschule': grundschule_einschulungsjahr,
+        'idEinschulungsartGrundschule': GRUNDSCHULE_EINSCHULUNGSART_ID,
+        'idEingangsphaseGrundschule': ID_GRUNDSCHULE_JAHRE_EINGANGSPHASE,
+        'wechseljahrSekI': sek1_wechsel,
+        'kuerzelErsteSchulformSek1': sek1_erste_schulform,
     }
 
     if id_uebergangsempfehlung is not None:
