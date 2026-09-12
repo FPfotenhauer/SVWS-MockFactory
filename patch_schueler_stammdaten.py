@@ -404,21 +404,60 @@ def split_nationalitaeten(nat_catalog: dict) -> Tuple[Optional[int], List[int]]:
     return deu_id, other_ids
 
 
+def load_canonical_verkehrssprache_ids() -> Optional[set]:
+    """Lädt die gültigen Verkehrssprache-IDs aus dem SVWS-Core-Type-Katalog
+    (katalogdaten/allinone.json, siehe https://<server>/types/allinone.json).
+
+    Manche Schemata enthalten in ihrer DB-Tabelle verwaiste Katalogeinträge
+    (z.B. id 96000 "Moldawisch", 150000/151000 "Tonga"), die GET .../verkehrssprachen
+    zurückliefert, aber vom PATCH-Endpunkt als "nicht gefunden" abgelehnt werden,
+    weil sie nicht (mehr) im offiziellen Core-Type-Katalog stehen. Gibt None zurück,
+    wenn die Datei fehlt oder nicht lesbar ist (dann wird nicht gefiltert).
+    """
+    path = Path(__file__).parent / 'katalogdaten' / 'allinone.json'
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        eintraege = data.get('Verkehrssprache', {}).get('daten', [])
+        ids = {
+            h['id']
+            for eintrag in eintraege
+            for h in eintrag.get('historie', [])
+            if isinstance(h.get('id'), int)
+        }
+        return ids or None
+    except Exception:
+        return None
+
+
 def split_verkehrssprachen(verkehrssprachen: List[dict]) -> Tuple[Optional[int], List[int]]:
     """Liefert (Deutsch-Katalog-ID, Liste weiterer Sprach-Katalog-IDs)."""
+    canonical_ids = load_canonical_verkehrssprache_ids()
+
     deu: Optional[int] = None
     others: List[int] = []
+    skipped: List[int] = []
     for item in verkehrssprachen:
         cat_id = item.get('id')
         # id 0 ("und" / Unbekannt) ist ein Sentinel, den der Server bei der
         # Auflösung ablehnt – daher nur echte, positive Katalog-IDs verwenden.
         if not isinstance(cat_id, int) or cat_id <= 0:
             continue
+        if canonical_ids is not None and cat_id not in canonical_ids:
+            skipped.append(cat_id)
+            continue
         kuerzel = str(item.get('kuerzel') or '').strip().lower()
         if kuerzel == 'deu':
             deu = cat_id
         else:
             others.append(cat_id)
+
+    if skipped:
+        print(
+            f"⚠️  {len(skipped)} Verkehrssprache-ID(s) aus DB-Katalog nicht im "
+            f"offiziellen Core-Type-Katalog gefunden, werden ignoriert: {sorted(skipped)}"
+        )
+
     return deu, others
 
 
@@ -926,30 +965,47 @@ def patch_schueler_stammdaten(config, batch_size: int = 200) -> Tuple[int, int]:
     patched = 0
     failed = 0
 
-    batches = chunked(payload_all, max(1, batch_size))
-    print(f'\nPatche {len(payload_all)} Schüler in {len(batches)} Batch(es)...')
-    print(f'URL: {url}\n')
-
-    for idx, batch in enumerate(batches, start=1):
+    def send_batch(batch: List[dict], label: str) -> Tuple[int, int]:
+        """Schickt einen Batch. Schlägt er fehl (und enthält mehr als 1 Eintrag),
+        wird er rekursiv halbiert, damit ein einzelner defekter Datensatz (z.B. eine
+        vom Server abgelehnte Katalog-ID) nicht den gesamten Batch mitreißt."""
         try:
             resp = api_session.patch(
                 url,
                 json=batch,
                 timeout=PATCH_TIMEOUT,
             )
-            if resp.status_code in (200, 201, 204):
-                patched += len(batch)
-                print(f"[{idx}/{len(batches)}] ✓ Batch mit {len(batch)} Einträgen (HTTP {resp.status_code})")
-            else:
-                failed += len(batch)
-                try:
-                    err = resp.json().get('message', resp.text)
-                except Exception:
-                    err = resp.text
-                print(f"[{idx}/{len(batches)}] ❌ Batch fehlgeschlagen (HTTP {resp.status_code}) - {err[:180]}")
         except requests.exceptions.RequestException as exc:
-            failed += len(batch)
-            print(f"[{idx}/{len(batches)}] ❌ Fehler beim Batch-Patch: {exc}")
+            print(f"[{label}] ❌ Fehler beim Batch-Patch ({len(batch)} Einträge): {exc}")
+            return 0, len(batch)
+
+        if resp.status_code in (200, 201, 204):
+            print(f"[{label}] ✓ Batch mit {len(batch)} Einträgen (HTTP {resp.status_code})")
+            return len(batch), 0
+
+        try:
+            err = resp.json().get('message', resp.text)
+        except Exception:
+            err = resp.text
+
+        if len(batch) == 1:
+            print(f"[{label}] ❌ Schüler-ID {batch[0].get('id')} übersprungen (HTTP {resp.status_code}) - {err[:180]}")
+            return 0, 1
+
+        print(f"[{label}] ❌ Batch fehlgeschlagen (HTTP {resp.status_code}) - {err[:180]} -> wird halbiert")
+        mid = len(batch) // 2
+        p1, f1 = send_batch(batch[:mid], f"{label}a")
+        p2, f2 = send_batch(batch[mid:], f"{label}b")
+        return p1 + p2, f1 + f2
+
+    batches = chunked(payload_all, max(1, batch_size))
+    print(f'\nPatche {len(payload_all)} Schüler in {len(batches)} Batch(es)...')
+    print(f'URL: {url}\n')
+
+    for idx, batch in enumerate(batches, start=1):
+        p, f = send_batch(batch, str(idx))
+        patched += p
+        failed += f
 
     print(f"\nErgebnis: {patched} erfolgreich, {failed} fehlgeschlagen")
     if failed == 0:

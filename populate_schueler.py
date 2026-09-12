@@ -679,6 +679,7 @@ def populate_schueler(
                 "(nur Primarstufe/Sek I + EF bei GY/GE)."
             )
 
+        valid_targets: List[Tuple[str, List[dict]]] = []
         for target_jahrgang in extra_target_jahrgaenge:
             target_pool = [
                 c for c in classes
@@ -690,11 +691,22 @@ def populate_schueler(
                     "Zusatz-10%-Aufnahmeschüler für diesen Jahrgang werden übersprungen."
                 )
                 continue
+            valid_targets.append((target_jahrgang, target_pool))
+
+        # extra_students_target ist bereits die GESAMTE 10%-Menge. Auf mehrere Ziel-
+        # Jahrgänge (z.B. 05 + EF bei GY/GE) aufteilen, statt sie je Jahrgang zu wiederholen.
+        n_targets = len(valid_targets)
+        for i, (target_jahrgang, target_pool) in enumerate(valid_targets):
+            batch_count = extra_students_target // n_targets
+            if i < extra_students_target % n_targets:
+                batch_count += 1
+            if batch_count <= 0:
+                continue
 
             extra_batches.append(
                 {
                     'jahrgang': target_jahrgang,
-                    'count': extra_students_target,
+                    'count': batch_count,
                     'pool': target_pool,
                 }
             )
@@ -728,11 +740,10 @@ def populate_schueler(
     if target_jahrgang:
         print(f"Jahrgangsfilter: {jahrgang}")
     if extra_batches:
+        total_extra_batches = sum(b['count'] for b in extra_batches)
+        print(f"Zusatz-Aufnahmen gesamt: {total_extra_batches} (10% von {total}), Status 0")
         for batch in extra_batches:
-            print(
-                f"Zusatz-Aufnahmen: {batch['count']} (10%) in Jahrgang {batch['jahrgang']}, "
-                "Status 0"
-            )
+            print(f"  davon {batch['count']} in Jahrgang {batch['jahrgang']}")
     print(
         "Religionen-Buckets: "
         f"ev={len(religion_buckets['evangelisch'])}, "
