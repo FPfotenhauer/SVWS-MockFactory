@@ -135,7 +135,7 @@ Zusätzliche optionale Tuning-Parameter:
 ### Hauptanwendung
 
 ```bash
-python mockfactory.py --help
+python3 mockfactory.py --help
 ```
 
 ### Komplettes Setup mit allen Katalogen (empfohlen)
@@ -143,7 +143,7 @@ python mockfactory.py --help
 Führt alle Schritte aus: Schema löschen → Schema erstellen → Datenbank initialisieren → alle Kataloge befüllen:
 
 ```bash
-python mockfactory.py --full-setup
+python3 mockfactory.py --full-setup
 ```
 
 Dies ist die einfachste Methode für ein komplettes Setup mit allen Katalogen und wird empfohlen.
